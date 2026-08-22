@@ -740,7 +740,9 @@ document.getElementById('jar-interest-rate-input').addEventListener('input', (e)
 document.getElementById('next-year-btn').addEventListener('click', () => {
   state.current_jar_savings += state.new_jar_savings + earnedInterest();
   state.year += 1;
+  state.new_jar_savings = 0;
   render();
+  document.getElementById('new-jar-savings-input').value = '';
 });
 
 render();

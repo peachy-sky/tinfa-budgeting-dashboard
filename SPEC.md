@@ -86,6 +86,8 @@ to stay valid if a tier change reduces that expense's max energy.
 - Clicking Next Year:
   - `current_jar_savings += new_jar_savings + earned_interest`
   - `year += 1`
+  - `new_jar_savings` resets to 0 and its input is cleared to empty (ready
+    for next year's contribution); `jar_interest_rate` is left as-is.
   - Does **not** touch income, tax, or any expense tier/energy state —
     expenses and income are edited only through their own sections.
 
