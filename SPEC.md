@@ -50,7 +50,7 @@ Sourced from `In-Game Budgeting - Level 1.csv`:
 | Rent + Utilities | NEED | -$200 | 8 (−200 … −4000) | 0 |
 | Groceries + Cooking @ Home | NEED | -$50 | 4 (−50 … −400) | 2 |
 | Dining Out | WANT | -$2,300 | 4 (−120 … −2300) | 1 |
-| Healthcare | NEED | -$200 | 3 (−150 … −300) | 1 |
+| Healthcare | NEED | $0 | 4 ($0 … −300) | 1 |
 | Travel + Vacations + Experiences | WANT | -$300 | 3 (−100 … −1000) | 1 |
 | Transit + Car + Gas | NEED | -$300 | 4 (−100 … −700) | 0 |
 | Shopping | WANT | -$700 | 4 (−200 … −1000) | 1 |
