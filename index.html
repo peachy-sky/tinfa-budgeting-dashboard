@@ -209,6 +209,28 @@
   .tax-table tr.total td { border-top: 1.5px solid var(--line); font-weight: 700; padding-top: 10px; color: var(--ink); }
   .tax-table tr.total td:first-child { color: var(--ink); }
   .tax-table td.amt { text-align: right; font-weight: 600; }
+  .income-cell { display: flex; justify-content: flex-end; align-items: baseline; gap: 2px; }
+  .income-input {
+    width: 92px;
+    border: none;
+    border-bottom: 1.5px dashed var(--rule);
+    background: transparent;
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: inherit;
+    text-align: right;
+    padding: 0 0 1px;
+    -moz-appearance: textfield;
+  }
+  .income-input::-webkit-outer-spin-button,
+  .income-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .income-input:hover { border-bottom-color: var(--accent); }
+  .income-input:focus {
+    outline: none;
+    border-bottom: 1.5px solid var(--accent);
+  }
 
   /* ---------- Expense ledger ---------- */
   .ledger-head {
@@ -340,7 +362,7 @@
   <section>
     <h2>Income</h2>
     <table class="tax-table">
-      <tr><td>Annual pre-tax income</td><td class="amt num">$<span id="pretax-income">0</span></td></tr>
+      <tr><td>Annual pre-tax income</td><td class="amt num income-cell">$<input type="number" id="pretax-income-input" class="income-input" min="0" step="500" aria-label="Annual pre-tax income"></td></tr>
       <tr><td>Income tax (<span id="tax-rate">0</span>%)</td><td class="amt num">$<span id="tax-amount">0</span></td></tr>
       <tr class="total"><td>Annual post-tax income</td><td class="amt num">$<span id="posttax-income">0</span></td></tr>
     </table>
@@ -513,7 +535,10 @@ function render() {
   const savingsPct = posttax ? annualSavings / posttax * 100 : 0;
 
   // income section
-  document.getElementById('pretax-income').textContent = pretax.toLocaleString();
+  const pretaxInput = document.getElementById('pretax-income-input');
+  if (document.activeElement !== pretaxInput) {
+    pretaxInput.value = pretax;
+  }
   document.getElementById('tax-rate').textContent = state.income_tax_rate;
   document.getElementById('tax-amount').textContent = tax.toLocaleString();
   document.getElementById('posttax-income').textContent = posttax.toLocaleString();
@@ -616,6 +641,12 @@ function renderDiamonds(energy, mEnergy) {
   }
   return html;
 }
+
+document.getElementById('pretax-income-input').addEventListener('input', (e) => {
+  const value = Math.max(0, Math.round(Number(e.target.value)) || 0);
+  state.annual_pretax_income = value;
+  render();
+});
 
 render();
 </script>

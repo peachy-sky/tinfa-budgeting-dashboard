@@ -8,7 +8,7 @@ step.
 
 | Variable | Start value | Notes |
 |---|---|---|
-| `annual_pretax_income` | 15000 | fixed for this MVP |
+| `annual_pretax_income` | 15000 | player-editable via a number input |
 | `income_tax` (rate) | 0% | hard-coded, drives `tax_amount` |
 | `annual_posttax_income` | 15000 | = pretax − tax |
 | `total_energy` | 7 | total energy pool |
@@ -31,7 +31,10 @@ not player-adjustable in this MVP.
   with a red circle + "!" instead of rendering an invalid/overflowing chart.
 
 ### 2. Income
-- Displays pre-tax income, tax amount (from hard-coded rate), post-tax income.
+- Annual pre-tax income is a player-editable number input (min 0); tax
+  amount (from the hard-coded rate) and post-tax income recompute live as
+  it changes, cascading into the needs/wants/savings percentages, the pie
+  chart, and the over-budget alert.
 
 ### 3. Expenses (the only player-editable section)
 Each expense has:
