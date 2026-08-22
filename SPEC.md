@@ -71,6 +71,24 @@ to stay valid if a tier change reduces that expense's max energy.
 - `total_monthly_expense`, `total_annual_expense`, `total_annual_savings`
   (turns red if negative, i.e. overspending).
 
+### 5. Interest Calculator
+- `current_jar_savings` (starts 0, display-only — only the Next Year button
+  changes it).
+- `new_jar_savings`: player-editable number input (this year's contribution).
+- `jar_interest_rate`: player-editable number input; entering `3` means 3%
+  (0.03) internally.
+- `earned_interest` (this year's interest, live-computed, not stored):
+  `(current_jar_savings + new_jar_savings) * (1 + jar_interest_rate)`.
+
+### 6. Year / Next Year
+- `year` counter, starts at 1, shown at the very bottom of the page next to
+  a **Next Year** button.
+- Clicking Next Year:
+  - `current_jar_savings += new_jar_savings + earned_interest`
+  - `year += 1`
+  - Does **not** touch income, tax, or any expense tier/energy state —
+    expenses and income are edited only through their own sections.
+
 ## Typography
 Headings (`h1`, `h2`, and the over-budget "!" mark) use the hand-lettered
 **Lazy Dog** typeface (sourced from

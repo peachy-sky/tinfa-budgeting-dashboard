@@ -231,6 +231,40 @@
     outline: none;
     border-bottom: 1.5px solid var(--accent);
   }
+  .income-input.rate-input { width: 48px; }
+
+  /* ---------- Year / Next Year ---------- */
+  .year-section {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 2px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .year-counter {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .year-counter .num { color: var(--ink); font-size: 1.1rem; }
+  .next-year-btn {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--surface);
+    background: var(--accent);
+    border: none;
+    border-radius: 999px;
+    padding: 11px 26px;
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.12s ease;
+  }
+  .next-year-btn:hover { filter: brightness(1.08); }
+  .next-year-btn:active { transform: scale(0.96); }
+  .next-year-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
   /* ---------- Expense ledger ---------- */
   .ledger-head {
@@ -384,6 +418,27 @@
     <div class="row"><span>Total annual expense</span><span class="num" id="total-annual">-$0</span></div>
     <div class="row grand"><span>Total annual savings</span><span class="num" id="total-savings">$0</span></div>
   </div>
+
+  <section>
+    <h2>Interest Calculator</h2>
+    <table class="tax-table">
+      <tr><td>Current Jar Savings</td><td class="amt num">$<span id="current-jar-savings">0</span></td></tr>
+      <tr>
+        <td>New Jar Savings</td>
+        <td class="amt num income-cell">$<input type="number" id="new-jar-savings-input" class="income-input" min="0" step="100" aria-label="New Jar Savings"></td>
+      </tr>
+      <tr>
+        <td>Jar Interest Rate</td>
+        <td class="amt num income-cell"><input type="number" id="jar-interest-rate-input" class="income-input rate-input" min="0" step="0.5" aria-label="Jar Interest Rate">%</td>
+      </tr>
+      <tr class="total"><td>This year's interest</td><td class="amt num">$<span id="earned-interest">0</span></td></tr>
+    </table>
+  </section>
+
+  <section class="year-section">
+    <div class="year-counter">Year: <span class="num" id="year-count">1</span></div>
+    <button type="button" id="next-year-btn" class="next-year-btn">Next Year &rarr;</button>
+  </section>
 </div>
 
 <script>
@@ -393,6 +448,10 @@ const state = {
   income_tax_rate: 0, // %
   total_energy: 7,
   work_energy: 3, // fixed energy baked into the $15,000 income, not player-adjustable in this MVP
+  year: 1,
+  current_jar_savings: 0,
+  new_jar_savings: 0,
+  jar_interest_rate: 0, // player enters e.g. "3" meaning 3% (0.03)
 };
 
 // Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...)
@@ -501,6 +560,10 @@ function availableEnergy() {
   return state.total_energy - state.work_energy - energySpentOnExpenses();
 }
 
+function earnedInterest() {
+  return (state.current_jar_savings + state.new_jar_savings) * (1 + state.jar_interest_rate / 100);
+}
+
 // Groceries and Dining Out are hard-coded to move inversely: cooking more at
 // home (raising groceries' tier) means eating out less (lowering dining's
 // tier), and vice versa.
@@ -559,6 +622,20 @@ function render() {
 
   renderPie(needsPct, wantsPct, savingsPct, Math.abs(totalAnnual) > posttax);
   renderExpenses();
+
+  // year / interest calculator
+  document.getElementById('year-count').textContent = state.year;
+  document.getElementById('current-jar-savings').textContent = Math.round(state.current_jar_savings).toLocaleString();
+
+  const newJarInput = document.getElementById('new-jar-savings-input');
+  if (document.activeElement !== newJarInput) {
+    newJarInput.value = state.new_jar_savings;
+  }
+  const jarRateInput = document.getElementById('jar-interest-rate-input');
+  if (document.activeElement !== jarRateInput) {
+    jarRateInput.value = state.jar_interest_rate;
+  }
+  document.getElementById('earned-interest').textContent = Math.round(earnedInterest()).toLocaleString();
 }
 
 function renderPie(needsPct, wantsPct, savingsPct, overBudget) {
@@ -645,6 +722,24 @@ function renderDiamonds(energy, mEnergy) {
 document.getElementById('pretax-income-input').addEventListener('input', (e) => {
   const value = Math.max(0, Math.round(Number(e.target.value)) || 0);
   state.annual_pretax_income = value;
+  render();
+});
+
+document.getElementById('new-jar-savings-input').addEventListener('input', (e) => {
+  state.new_jar_savings = Math.max(0, Number(e.target.value) || 0);
+  render();
+});
+
+document.getElementById('jar-interest-rate-input').addEventListener('input', (e) => {
+  state.jar_interest_rate = Math.max(0, Number(e.target.value) || 0);
+  render();
+});
+
+// Advances the year counter and rolls this year's jar savings + interest into
+// current_jar_savings. Does not touch income, tax, or any expense state.
+document.getElementById('next-year-btn').addEventListener('click', () => {
+  state.current_jar_savings += state.new_jar_savings + earnedInterest();
+  state.year += 1;
   render();
 });
 
