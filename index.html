@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Income + Budgeting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Lazy Dog';
+    src: url(data:font/ttf;base64,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) format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  :root {
+    --paper: #ece7d9;
+    --surface: #f8f5eb;
+    --surface-2: #efe9da;
+    --ink: #2a2820;
+    --ink-muted: #726b59;
+    --line: #2a2820;
+    --rule: rgba(42, 40, 32, 0.16);
+    --accent: #3c6e52;
+    --accent-soft: #cfe0d3;
+    --need: #6e93be;
+    --need-soft: #d7e2ee;
+    --want: #9a81b7;
+    --want-soft: #e4dbee;
+    --gold: #c89530;
+    --gold-soft: #f0dfae;
+    --danger: #b5473c;
+    --danger-soft: #f0d3cd;
+    --shadow: rgba(42, 40, 32, 0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1c1a15;
+      --surface: #242019;
+      --surface-2: #2b271e;
+      --ink: #ebe4d2;
+      --ink-muted: #9c9480;
+      --line: #ebe4d2;
+      --rule: rgba(235, 228, 210, 0.16);
+      --accent: #74b18d;
+      --accent-soft: #33463b;
+      --need: #8fb1d8;
+      --need-soft: #2c3a4a;
+      --want: #bda3d9;
+      --want-soft: #3a3149;
+      --gold: #ddb24c;
+      --gold-soft: #4a3d1e;
+      --danger: #e08b7f;
+      --danger-soft: #4a2c26;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1c1a15;
+    --surface: #242019;
+    --surface-2: #2b271e;
+    --ink: #ebe4d2;
+    --ink-muted: #9c9480;
+    --line: #ebe4d2;
+    --rule: rgba(235, 228, 210, 0.16);
+    --accent: #74b18d;
+    --accent-soft: #33463b;
+    --need: #8fb1d8;
+    --need-soft: #2c3a4a;
+    --want: #bda3d9;
+    --want-soft: #3a3149;
+    --gold: #ddb24c;
+    --gold-soft: #4a3d1e;
+    --danger: #e08b7f;
+    --danger-soft: #4a2c26;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { background: var(--paper); }
+  body {
+    margin: 0;
+    padding: clamp(16px, 4vw, 40px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  }
+  .num {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sheet {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    padding: clamp(20px, 4vw, 44px);
+    box-shadow: 0 1px 2px var(--shadow), 0 12px 32px -20px var(--shadow);
+  }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-bottom: 22px;
+    border-bottom: 2px solid var(--line);
+  }
+  h1 {
+    font-family: 'Lazy Dog', 'Segoe Script', cursive;
+    font-weight: 400;
+    font-size: clamp(2.3rem, 5.5vw, 3.1rem);
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .summary-line {
+    margin-top: 14px;
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+  }
+  .summary-line .num { color: var(--ink); font-weight: 600; }
+
+  .pct-row {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pct {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .pct .num { font-size: 0.95rem; }
+  .pct.needs { background: var(--need-soft); color: var(--need); }
+  .pct.wants { background: var(--want-soft); color: var(--want); }
+  .pct.savings { background: var(--accent-soft); color: var(--accent); }
+
+  .energy-box {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1.5px solid var(--rule);
+    border-radius: 999px;
+    padding: 6px 14px 6px 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .energy-box .bolt { color: var(--gold); font-size: 1rem; }
+  .energy-box .num { color: var(--ink); font-size: 0.95rem; }
+
+  .pie-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+  #pie-chart {
+    width: 108px; height: 108px;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    box-shadow: inset 0 0 0 6px var(--surface);
+  }
+  .alert-circle {
+    width: 108px; height: 108px; border-radius: 50%;
+    background: var(--danger);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--surface); font-family: 'Lazy Dog', cursive; font-size: 3rem; font-weight: 400;
+  }
+  .pie-legend {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-top: 32px; }
+  h2 {
+    font-family: 'Lazy Dog', 'Segoe Script', cursive;
+    font-weight: 400;
+    font-size: 1.55rem;
+    letter-spacing: 0.01em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+
+  .tax-table { width: 100%; max-width: 480px; border-collapse: collapse; }
+  .tax-table td { padding: 7px 4px; font-size: 0.95rem; }
+  .tax-table td:first-child { color: var(--ink-muted); }
+  .tax-table tr.total td { border-top: 1.5px solid var(--line); font-weight: 700; padding-top: 10px; color: var(--ink); }
+  .tax-table tr.total td:first-child { color: var(--ink); }
+  .tax-table td.amt { text-align: right; font-weight: 600; }
+
+  /* ---------- Expense ledger ---------- */
+  .ledger-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 168px 140px minmax(0, 1.3fr);
+    gap: 14px;
+    padding: 0 4px 8px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    border-bottom: 1.5px solid var(--rule);
+  }
+
+  #expense-list { display: flex; flex-direction: column; }
+  .expense-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 168px 140px minmax(0, 1.3fr);
+    align-items: center;
+    gap: 14px;
+    padding: 13px 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .expense-row:hover { background: var(--surface-2); }
+
+  .expense-row .name { font-weight: 600; font-size: 0.94rem; }
+  .expense-row .name .tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .tag.NEED { background: var(--need-soft); color: var(--need); }
+  .tag.WANT { background: var(--want-soft); color: var(--want); }
+
+  .stepper { display: flex; align-items: center; gap: 8px; justify-content: center; }
+  .stepper button {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9rem;
+    cursor: pointer;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s ease, transform 0.08s ease;
+  }
+  .stepper button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .stepper button:active:not(:disabled) { transform: scale(0.92); }
+  .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stepper button:disabled { opacity: 0.28; cursor: not-allowed; }
+  .stepper .value.cost { min-width: 78px; text-align: center; font-weight: 700; font-size: 0.94rem; }
+
+  .energy-cell .diamonds { display: flex; gap: 4px; }
+  .diamond {
+    width: 11px; height: 11px;
+    transform: rotate(45deg);
+    border: 1.5px solid var(--rule);
+    background: var(--surface);
+  }
+  .diamond.filled { background: var(--gold); border-color: var(--gold); }
+  .diamond.disabled { opacity: 0.22; }
+
+  .notes { font-size: 0.78rem; color: var(--ink-muted); font-style: italic; line-height: 1.4; }
+
+  /* ---------- Totals ---------- */
+  .totals {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 2px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 420px;
+    margin-left: auto;
+  }
+  .totals .row { display: flex; justify-content: space-between; font-size: 0.92rem; color: var(--ink-muted); }
+  .totals .row .num { color: var(--ink); font-weight: 600; }
+  .totals .row.grand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--ink);
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+  }
+  .totals .row.grand .num { font-size: 1.15rem; }
+  .negative { color: var(--danger) !important; }
+
+  @media (max-width: 760px) {
+    .ledger-head { display: none; }
+    .expense-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 14px 4px;
+    }
+    .stepper { justify-content: flex-start; }
+    .totals { margin-left: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">Level 1 · Budget Sheet</div>
+      <h1>Income + Budgeting</h1>
+      <div class="summary-line">
+        Post-tax income: <span class="num">$<span id="posttax-income-label">0</span>/yr</span> (100%)
+      </div>
+      <div class="pct-row">
+        <span class="pct needs">Needs <span class="num" id="needs-pct">0</span>%</span>
+        <span class="pct wants">Wants <span class="num" id="wants-pct">0</span>%</span>
+        <span class="pct savings">Savings <span class="num" id="savings-pct">0</span>%</span>
+      </div>
+      <div class="energy-box"><span class="bolt">&#9670;</span>Energy <span class="num"><span id="available-energy">0</span> / <span id="total-energy">7</span></span> available</div>
+    </div>
+    <div class="pie-wrap">
+      <div id="pie-container"></div>
+      <div class="pie-legend">needs · wants · savings</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Income</h2>
+    <table class="tax-table">
+      <tr><td>Annual pre-tax income</td><td class="amt num">$<span id="pretax-income">0</span></td></tr>
+      <tr><td>Income tax (<span id="tax-rate">0</span>%)</td><td class="amt num">$<span id="tax-amount">0</span></td></tr>
+      <tr class="total"><td>Annual post-tax income</td><td class="amt num">$<span id="posttax-income">0</span></td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Expenses</h2>
+    <div class="ledger-head">
+      <div>Expense</div>
+      <div style="text-align:center">Monthly cost</div>
+      <div style="text-align:center">Energy</div>
+      <div>Notes</div>
+    </div>
+    <div id="expense-list"></div>
+  </section>
+
+  <div class="totals">
+    <div class="row"><span>Total monthly expense</span><span class="num" id="total-monthly">-$0</span></div>
+    <div class="row"><span>Total annual expense</span><span class="num" id="total-annual">-$0</span></div>
+    <div class="row grand"><span>Total annual savings</span><span class="num" id="total-savings">$0</span></div>
+  </div>
+</div>
+
+<script>
+// ---------- State ----------
+const state = {
+  annual_pretax_income: 15000,
+  income_tax_rate: 0, // %
+  total_energy: 7,
+  work_energy: 3, // fixed energy baked into the $15,000 income, not player-adjustable in this MVP
+};
+
+// Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...)
+const expenses = [
+  {
+    key: 'rent', name: 'Rent + Utilities', category: 'NEED',
+    levelIndex: 0, energy: 0,
+    levels: [
+      { costs: [-200], note: 'living at home...' },
+      { costs: [-1000], note: '' },
+      { costs: [-1500], note: '' },
+      { costs: [-2000], note: '' },
+      { costs: [-2500], note: '' },
+      { costs: [-3000], note: '' },
+      { costs: [-3500], note: '' },
+      { costs: [-4000], note: '' },
+    ],
+  },
+  {
+    key: 'groceries', name: 'Groceries + Cooking @ Home', category: 'NEED',
+    levelIndex: 0, energy: 0, inverseLink: 'dining',
+    levels: [
+      { costs: [-50, -50, -50], note: 'paying my fair share of groceries!' },
+      { costs: [-150, -100, -50], note: 'paying my fair share of groceries!' },
+      { costs: [-300, -200, -150], note: 'paying my fair share of groceries!' },
+      { costs: [-400, -250, -200], note: 'paying my fair share of groceries!' },
+    ],
+  },
+  {
+    key: 'dining', name: 'Dining Out', category: 'WANT',
+    levelIndex: 3, energy: 0, inverseLink: 'groceries',
+    levels: [
+      { costs: [-120, -100], note: 'dining out 1x a week' },
+      { costs: [-300, -200], note: 'dining out 2.5x a week' },
+      { costs: [-900, -700], note: 'dining out 1x a day' },
+      { costs: [-2300, -2000], note: 'dining out 2.5x a day' },
+    ],
+  },
+  {
+    key: 'healthcare', name: 'Healthcare', category: 'NEED',
+    levelIndex: 1, energy: 0,
+    levels: [
+      { costs: [-150, -100], note: '2x modifier on healthcare costs... / working out feels good!' },
+      { costs: [-200, -150], note: 'working out feels good!' },
+      { costs: [-300, -200], note: '0.75x modifier on healthcare costs! / working out feels good!' },
+    ],
+  },
+  {
+    key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT',
+    levelIndex: 1, energy: 0,
+    levels: [
+      { costs: [-100, -50], note: '' },
+      { costs: [-300, -200], note: '' },
+      { costs: [-1000, -800], note: '' },
+    ],
+  },
+  {
+    key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
+    levelIndex: 1, energy: 0,
+    levels: [
+      { costs: [-100], note: 'no car, just bussin~' },
+      { costs: [-300], note: 'cheap car, 2x mod on maintenance :(' },
+      { costs: [-500], note: 'reliable, classic, safe car' },
+      { costs: [-700], note: 'dream car! insurance is expensive..' },
+    ],
+  },
+  {
+    key: 'shopping', name: 'Shopping', category: 'WANT',
+    levelIndex: 2, energy: 0,
+    levels: [
+      { costs: [-200, -100], note: 'still gotta buy SOME things, like toiletries...' },
+      { costs: [-450, -300], note: '' },
+      { costs: [-700, -500], note: '' },
+      { costs: [-1000, -800], note: '' },
+    ],
+  },
+  {
+    key: 'education', name: 'Education (Trade School)', category: 'NEED',
+    levelIndex: 1, energy: 0,
+    levels: [
+      { costs: [-250, -200], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
+      { costs: [-400, -300], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
+    ],
+  },
+  {
+    key: 'pet', name: 'Pet', category: 'WANT',
+    levelIndex: 0, energy: 0,
+    levels: [
+      { costs: [0], note: 'food, toys, apt pet fee (no cat) — modifiers: rescued from shelter -$125, purchased from breeder -$83 [not implemented]' },
+    ],
+  },
+];
+
+// ---------- Derived getters ----------
+function currentCost(exp) {
+  return exp.levels[exp.levelIndex].costs[exp.energy];
+}
+function maxEnergy(exp) {
+  return exp.levels[exp.levelIndex].costs.length - 1;
+}
+function energySpentOnExpenses() {
+  return expenses.reduce((sum, e) => sum + e.energy, 0);
+}
+function availableEnergy() {
+  return state.total_energy - state.work_energy - energySpentOnExpenses();
+}
+
+// Groceries and Dining Out are hard-coded to move inversely: cooking more at
+// home (raising groceries' tier) means eating out less (lowering dining's
+// tier), and vice versa.
+function changeLevel(exp, delta) {
+  exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, exp.levelIndex + delta));
+  exp.energy = Math.min(exp.energy, maxEnergy(exp));
+
+  if (exp.inverseLink) {
+    const linked = expenses.find(e => e.key === exp.inverseLink);
+    if (linked) {
+      linked.levelIndex = Math.max(0, Math.min(linked.levels.length - 1, linked.levelIndex - delta));
+      linked.energy = Math.min(linked.energy, maxEnergy(linked));
+    }
+  }
+}
+
+// ---------- Render ----------
+function render() {
+  const pretax = state.annual_pretax_income;
+  const tax = Math.round(pretax * (state.income_tax_rate / 100));
+  const posttax = pretax - tax;
+
+  const totalMonthly = expenses.reduce((sum, e) => sum + currentCost(e), 0);
+  const totalAnnual = totalMonthly * 12;
+  const annualSavings = posttax + totalAnnual; // totalAnnual is negative
+
+  const annualNeeds = expenses.filter(e => e.category === 'NEED').reduce((s, e) => s + currentCost(e), 0) * 12;
+  const annualWants = expenses.filter(e => e.category === 'WANT').reduce((s, e) => s + currentCost(e), 0) * 12;
+
+  const needsPct = posttax ? Math.abs(annualNeeds) / posttax * 100 : 0;
+  const wantsPct = posttax ? Math.abs(annualWants) / posttax * 100 : 0;
+  const savingsPct = posttax ? annualSavings / posttax * 100 : 0;
+
+  // income section
+  document.getElementById('pretax-income').textContent = pretax.toLocaleString();
+  document.getElementById('tax-rate').textContent = state.income_tax_rate;
+  document.getElementById('tax-amount').textContent = tax.toLocaleString();
+  document.getElementById('posttax-income').textContent = posttax.toLocaleString();
+  document.getElementById('posttax-income-label').textContent = posttax.toLocaleString();
+
+  document.getElementById('needs-pct').textContent = needsPct.toFixed(0);
+  document.getElementById('wants-pct').textContent = wantsPct.toFixed(0);
+  document.getElementById('savings-pct').textContent = savingsPct.toFixed(0);
+
+  document.getElementById('total-energy').textContent = state.total_energy;
+  document.getElementById('available-energy').textContent = availableEnergy();
+
+  document.getElementById('total-monthly').textContent = `-$${Math.abs(totalMonthly).toLocaleString()}`;
+  document.getElementById('total-annual').textContent = `-$${Math.abs(totalAnnual).toLocaleString()}`;
+  const savingsEl = document.getElementById('total-savings');
+  savingsEl.textContent = `${annualSavings < 0 ? '-' : ''}$${Math.abs(annualSavings).toLocaleString()}`;
+  savingsEl.classList.toggle('negative', annualSavings < 0);
+
+  renderPie(needsPct, wantsPct, savingsPct, Math.abs(totalAnnual) > posttax);
+  renderExpenses();
+}
+
+function renderPie(needsPct, wantsPct, savingsPct, overBudget) {
+  const container = document.getElementById('pie-container');
+  if (overBudget) {
+    container.innerHTML = `<div class="alert-circle">!</div>`;
+    return;
+  }
+  const total = needsPct + wantsPct + savingsPct || 1;
+  const n = needsPct / total * 360;
+  const w = wantsPct / total * 360;
+  const gradient = `conic-gradient(
+    var(--need) 0deg ${n}deg,
+    var(--want) ${n}deg ${n + w}deg,
+    var(--accent) ${n + w}deg 360deg
+  )`;
+  container.innerHTML = `<div id="pie-chart" style="background:${gradient}"></div>`;
+}
+
+function renderExpenses() {
+  const list = document.getElementById('expense-list');
+  list.innerHTML = '';
+  const avail = availableEnergy();
+
+  expenses.forEach(exp => {
+    const row = document.createElement('div');
+    row.className = 'expense-row';
+
+    const linked = exp.inverseLink ? expenses.find(e => e.key === exp.inverseLink) : null;
+    const cost = currentCost(exp);
+    const canDecreaseLevel = exp.levelIndex > 0 && (!linked || linked.levelIndex < linked.levels.length - 1);
+    const canIncreaseLevel = exp.levelIndex < exp.levels.length - 1 && (!linked || linked.levelIndex > 0);
+    const mEnergy = maxEnergy(exp);
+    const canAddEnergy = exp.energy < mEnergy && avail > 0;
+    const canRemoveEnergy = exp.energy > 0;
+
+    row.innerHTML = `
+      <div class="name"><span class="tag ${exp.category}">${exp.category}</span>${exp.name}</div>
+      <div class="stepper">
+        <button data-action="level-down" ${canDecreaseLevel ? '' : 'disabled'} aria-label="Decrease ${exp.name} cost">&ominus;</button>
+        <span class="value cost num">-$${Math.abs(cost).toLocaleString()}</span>
+        <button data-action="level-up" ${canIncreaseLevel ? '' : 'disabled'} aria-label="Increase ${exp.name} cost">&oplus;</button>
+      </div>
+      <div class="stepper energy-cell">
+        <button data-action="energy-down" ${canRemoveEnergy ? '' : 'disabled'} aria-label="Remove energy from ${exp.name}">&ominus;</button>
+        <div class="diamonds">${renderDiamonds(exp.energy, mEnergy)}</div>
+        <button data-action="energy-up" ${canAddEnergy ? '' : 'disabled'} aria-label="Add energy to ${exp.name}">&oplus;</button>
+      </div>
+      <div class="notes">${exp.levels[exp.levelIndex].note}</div>
+    `;
+
+    row.querySelector('[data-action="level-down"]')?.addEventListener('click', () => {
+      changeLevel(exp, -1);
+      render();
+    });
+    row.querySelector('[data-action="level-up"]')?.addEventListener('click', () => {
+      changeLevel(exp, 1);
+      render();
+    });
+    row.querySelector('[data-action="energy-down"]')?.addEventListener('click', () => {
+      exp.energy--;
+      render();
+    });
+    row.querySelector('[data-action="energy-up"]')?.addEventListener('click', () => {
+      exp.energy++;
+      render();
+    });
+
+    list.appendChild(row);
+  });
+}
+
+function renderDiamonds(energy, mEnergy) {
+  if (mEnergy === 0) {
+    return `<div class="diamond disabled"></div>`;
+  }
+  let html = '';
+  for (let i = 0; i < mEnergy; i++) {
+    html += `<div class="diamond ${i < energy ? 'filled' : ''}"></div>`;
+  }
+  return html;
+}
+
+render();
+</script>
+</body>
+</html>
