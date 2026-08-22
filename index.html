@@ -379,14 +379,14 @@ const expenses = [
     key: 'rent', name: 'Rent + Utilities', category: 'NEED',
     levelIndex: 0, energy: 0,
     levels: [
-      { costs: [-200], note: 'living at home...' },
-      { costs: [-1000], note: '' },
-      { costs: [-1500], note: '' },
+      { costs: [-200], note: 'living at home... minus 1/4 hearts/yr' },
+      { costs: [-1000], note: 'minus 1/2 hearts/yr (bad apt)' },
+      { costs: [-1500], note: 'minus 1/2 hearts/yr (bad apt)' },
       { costs: [-2000], note: '' },
       { costs: [-2500], note: '' },
       { costs: [-3000], note: '' },
-      { costs: [-3500], note: '' },
-      { costs: [-4000], note: '' },
+      { costs: [-3500], note: 'add 1/2 hearts per year' },
+      { costs: [-4000], note: 'add 1/2 hearts per year' },
     ],
   },
   {
@@ -406,16 +406,16 @@ const expenses = [
       { costs: [-120, -100], note: 'dining out 1x a week' },
       { costs: [-300, -200], note: 'dining out 2.5x a week' },
       { costs: [-900, -700], note: 'dining out 1x a day' },
-      { costs: [-2300, -2000], note: 'dining out 2.5x a day' },
+      { costs: [-2300, -2000], note: 'dining out 2.5x a day, plus 1/4 hearts/yr' },
     ],
   },
   {
     key: 'healthcare', name: 'Healthcare', category: 'NEED',
     levelIndex: 1, energy: 0,
     levels: [
-      { costs: [-150, -100], note: '2x modifier on healthcare costs... / working out feels good!' },
-      { costs: [-200, -150], note: 'working out feels good!' },
-      { costs: [-300, -200], note: '0.75x modifier on healthcare costs! / working out feels good!' },
+      { costs: [-150, -100], note: '2x modifier on healthcare costs... / working out feels good! plus 1/4 hearts/yr if 1 energy' },
+      { costs: [-200, -150], note: 'working out feels good! plus 1/4 hearts/yr if 1 energy' },
+      { costs: [-300, -200], note: '0.75x modifier on healthcare costs! / working out feels good! plus 1/4 hearts/yr if 1 energy' },
     ],
   },
   {
@@ -423,15 +423,15 @@ const expenses = [
     levelIndex: 1, energy: 0,
     levels: [
       { costs: [-100, -50], note: '' },
-      { costs: [-300, -200], note: '' },
-      { costs: [-1000, -800], note: '' },
+      { costs: [-300, -200], note: 'plus 1/4 heart/yr' },
+      { costs: [-1000, -800], note: 'plus 1 heart/yr' },
     ],
   },
   {
     key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
     levelIndex: 1, energy: 0,
     levels: [
-      { costs: [-100], note: 'no car, just bussin~' },
+      { costs: [-100], note: 'no car, just bussin~ minus 1/2 heart/yr' },
       { costs: [-300], note: 'cheap car, 2x mod on maintenance :(' },
       { costs: [-500], note: 'reliable, classic, safe car' },
       { costs: [-700], note: 'dream car! insurance is expensive..' },
@@ -444,7 +444,7 @@ const expenses = [
       { costs: [-200, -100], note: 'still gotta buy SOME things, like toiletries...' },
       { costs: [-450, -300], note: '' },
       { costs: [-700, -500], note: '' },
-      { costs: [-1000, -800], note: '' },
+      { costs: [-1000, -800], note: 'plus 1/4 hearts/yr' },
     ],
   },
   {
