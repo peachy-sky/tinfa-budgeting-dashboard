@@ -435,6 +435,19 @@
     </table>
   </section>
 
+  <section>
+    <h2>Hearts</h2>
+    <table class="tax-table">
+      <tr><td>Hearts Last Year</td><td class="amt num" id="hearts-last-year">5</td></tr>
+      <tr><td>Hearts This Year</td><td class="amt num" id="hearts-this-year">0</td></tr>
+      <tr>
+        <td>Modifier</td>
+        <td class="amt num income-cell"><input type="number" id="hearts-modifier-input" class="income-input" step="0.25" aria-label="Hearts Modifier"></td>
+      </tr>
+      <tr class="total"><td>Current Hearts Total</td><td class="amt num" id="current-hearts-total">0</td></tr>
+    </table>
+  </section>
+
   <section class="year-section">
     <div class="year-counter">Year: <span class="num" id="year-count">1</span></div>
     <button type="button" id="next-year-btn" class="next-year-btn">Next Year &rarr;</button>
@@ -452,6 +465,8 @@ const state = {
   current_jar_savings: 0,
   new_jar_savings: 0,
   jar_interest_rate: 0, // player enters e.g. "3" meaning 3% (0.03)
+  hearts_last_year: 5,
+  hearts_modifier: 0,
 };
 
 // Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...)
@@ -460,88 +475,88 @@ const expenses = [
     key: 'rent', name: 'Rent + Utilities', category: 'NEED',
     levelIndex: 0, energy: 0, hidden: true,
     levels: [
-      { costs: [-200], note: 'living at home... minus 1/4 hearts/yr' },
-      { costs: [-1000], note: 'minus 1/2 hearts/yr (bad apt)' },
-      { costs: [-1500], note: 'minus 1/2 hearts/yr (bad apt)' },
-      { costs: [-2000], note: '' },
-      { costs: [-2500], note: '' },
-      { costs: [-3000], note: '' },
-      { costs: [-3500], note: 'add 1/2 hearts per year' },
-      { costs: [-4000], note: 'add 1/2 hearts per year' },
+      { costs: [-200], hearts: -0.25, note: 'living at home...' },
+      { costs: [-1000], hearts: -0.5, note: 'bad apartment...' },
+      { costs: [-1500], hearts: -0.5, note: 'bad apartment...' },
+      { costs: [-2000], hearts: 0, note: '' },
+      { costs: [-2500], hearts: 0, note: '' },
+      { costs: [-3000], hearts: 0, note: '' },
+      { costs: [-3500], hearts: 0.5, note: '' },
+      { costs: [-4000], hearts: 0.5, note: '' },
     ],
   },
   {
     key: 'groceries', name: 'Groceries + Cooking @ Home', category: 'NEED',
     levelIndex: 0, energy: 0, inverseLink: 'dining',
     levels: [
-      { costs: [-50, -50, -50], note: 'paying my fair share of groceries!' },
-      { costs: [-150, -100, -50], note: 'paying my fair share of groceries!' },
-      { costs: [-300, -200, -150], note: 'paying my fair share of groceries!' },
-      { costs: [-400, -250, -200], note: 'paying my fair share of groceries!' },
+      { costs: [-50, -50, -50], hearts: 0, note: 'paying my fair share of groceries!' },
+      { costs: [-150, -100, -50], hearts: 0, note: 'paying my fair share of groceries!' },
+      { costs: [-300, -200, -150], hearts: 0, note: 'paying my fair share of groceries!' },
+      { costs: [-400, -250, -200], hearts: 0, note: 'paying my fair share of groceries!' },
     ],
   },
   {
     key: 'dining', name: 'Dining Out', category: 'WANT',
     levelIndex: 3, energy: 0, inverseLink: 'groceries',
     levels: [
-      { costs: [-120, -100], note: 'dining out 1x a week' },
-      { costs: [-300, -200], note: 'dining out 2.5x a week' },
-      { costs: [-900, -700], note: 'dining out 1x a day' },
-      { costs: [-2300, -2000], note: 'dining out 2.5x a day, plus 1/4 hearts/yr' },
+      { costs: [-120, -100], hearts: 0, note: 'dining out 1x a week' },
+      { costs: [-300, -200], hearts: 0, note: 'dining out 2.5x a week' },
+      { costs: [-900, -700], hearts: 0, note: 'dining out 1x a day' },
+      { costs: [-2300, -2000], hearts: 0.25, note: 'dining out 2.5x a day' },
     ],
   },
   {
     key: 'healthcare', name: 'Healthcare', category: 'NEED',
     levelIndex: 0, energy: 0,
     levels: [
-      { costs: [0, 0], note: "on parents' healthcare til 26! / working out feels good! plus 1/4 hearts/yr if 1 energy" },
-      { costs: [-150, -100], note: '2x modifier on healthcare costs... / working out feels good! plus 1/4 hearts/yr if 1 energy' },
-      { costs: [-200, -150], note: 'working out feels good! plus 1/4 hearts/yr if 1 energy' },
-      { costs: [-300, -200], note: '0.75x modifier on healthcare costs! / working out feels good! plus 1/4 hearts/yr if 1 energy' },
+      { costs: [0, 0], hearts: 0, note: "on parents' healthcare til 26! / working out feels good!" },
+      { costs: [-150, -100], hearts: 0, note: '2x modifier on healthcare costs... / working out feels good!' },
+      { costs: [-200, -150], hearts: 0, note: 'working out feels good!' },
+      { costs: [-300, -200], hearts: 0, note: '0.75x modifier on healthcare costs! / working out feels good!' },
     ],
   },
   {
     key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT',
     levelIndex: 1, energy: 0,
     levels: [
-      { costs: [-100, -50], note: '' },
-      { costs: [-300, -200], note: 'plus 1/4 heart/yr' },
-      { costs: [-1000, -800], note: 'plus 1 heart/yr' },
+      { costs: [-100, -50], hearts: 0, note: '' },
+      { costs: [-300, -200], hearts: 0.25, note: '' },
+      { costs: [-1000, -800], hearts: 1, note: '' },
     ],
   },
   {
     key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
     levelIndex: 1, energy: 0, hidden: true,
     levels: [
-      { costs: [-100], note: 'no car, just bussin~ minus 1/2 heart/yr' },
-      { costs: [-300], note: 'cheap car, 2x mod on maintenance :(' },
-      { costs: [-500], note: 'reliable, classic, safe car' },
-      { costs: [-700], note: 'dream car! insurance is expensive..' },
+      { costs: [-100], hearts: -0.5, note: 'no car, just bussin~' },
+      { costs: [-300], hearts: 0, note: 'cheap car, 2x mod on maintenance :(' },
+      { costs: [-500], hearts: 0, note: 'reliable, classic, safe car' },
+      { costs: [-700], hearts: 0, note: 'dream car! insurance is expensive..' },
     ],
   },
   {
     key: 'shopping', name: 'Shopping', category: 'WANT',
     levelIndex: 2, energy: 0, hidden: true,
     levels: [
-      { costs: [-200, -100], note: 'still gotta buy SOME things, like toiletries...' },
-      { costs: [-450, -300], note: '' },
-      { costs: [-700, -500], note: '' },
-      { costs: [-1000, -800], note: 'plus 1/4 hearts/yr' },
+      { costs: [-200, -100], hearts: 0, note: 'still gotta buy SOME things, like toiletries...' },
+      { costs: [-450, -300], hearts: 0, note: '' },
+      { costs: [-700, -500], hearts: 0, note: '' },
+      { costs: [-1000, -800], hearts: 0.25, note: '' },
     ],
   },
   {
     key: 'education', name: 'Education (Trade School)', category: 'NEED',
     levelIndex: 1, energy: 0, hidden: true,
     levels: [
-      { costs: [-250, -200], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
-      { costs: [-400, -300], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
+      { costs: [-250, -200], hearts: 0, note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
+      { costs: [-400, -300], hearts: 0, note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
     ],
   },
   {
     key: 'pet', name: 'Pet', category: 'WANT',
     levelIndex: 0, energy: 0,
     levels: [
-      { costs: [0], note: 'food, toys, apt pet fee (no cat) — modifiers: rescued from shelter -$125, purchased from breeder -$83 [not implemented]' },
+      { costs: [0], hearts: 0, note: 'food, toys, apt pet fee (no cat) — modifiers: rescued from shelter -$125, purchased from breeder -$83 [not implemented]' },
     ],
   },
 ];
@@ -569,6 +584,16 @@ function availableEnergy() {
 
 function earnedInterest() {
   return (state.current_jar_savings + state.new_jar_savings) * (state.jar_interest_rate / 100);
+}
+
+function currentHearts(exp) {
+  return exp.levels[exp.levelIndex].hearts || 0;
+}
+function heartsThisYear() {
+  return visibleExpenses().reduce((sum, e) => sum + currentHearts(e), 0);
+}
+function currentHeartsTotal() {
+  return state.hearts_last_year + heartsThisYear() + state.hearts_modifier;
 }
 
 // Groceries and Dining Out are hard-coded to move inversely: cooking more at
@@ -644,6 +669,15 @@ function render() {
     jarRateInput.value = state.jar_interest_rate;
   }
   document.getElementById('earned-interest').textContent = Math.round(earnedInterest()).toLocaleString();
+
+  // hearts
+  document.getElementById('hearts-last-year').textContent = state.hearts_last_year.toLocaleString();
+  document.getElementById('hearts-this-year').textContent = heartsThisYear().toLocaleString();
+  const heartsModifierInput = document.getElementById('hearts-modifier-input');
+  if (document.activeElement !== heartsModifierInput) {
+    heartsModifierInput.value = state.hearts_modifier;
+  }
+  document.getElementById('current-hearts-total').textContent = currentHeartsTotal().toLocaleString();
 }
 
 function renderPie(needsPct, wantsPct, savingsPct, overBudget) {
@@ -740,6 +774,11 @@ document.getElementById('new-jar-savings-input').addEventListener('input', (e) =
 
 document.getElementById('jar-interest-rate-input').addEventListener('input', (e) => {
   state.jar_interest_rate = Math.max(0, Number(e.target.value) || 0);
+  render();
+});
+
+document.getElementById('hearts-modifier-input').addEventListener('input', (e) => {
+  state.hearts_modifier = Number(e.target.value) || 0;
   render();
 });
 

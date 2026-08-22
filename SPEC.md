@@ -91,7 +91,21 @@ to stay valid if a tier change reduces that expense's max energy.
 - `earned_interest` (this year's interest, live-computed, not stored):
   `(current_jar_savings + new_jar_savings) * jar_interest_rate`.
 
-### 6. Year / Next Year
+### 6. Hearts
+Each expense's cost tier optionally carries a `hearts` value (fractional,
+e.g. ±0.25/±0.5/±1) sourced from the spreadsheet's HEARTS column — most
+tiers are 0. Only groceries, dining, healthcare, travel, transit, and rent
+carry non-zero values on some tiers; shopping and education are 0
+throughout in this revision.
+- `hearts_last_year`: starts at 5, display-only (not touched by Next Year).
+- `hearts_this_year` (live-computed): sum of `hearts` at the current tier
+  of every **visible** expense (hidden/not-yet-revealed expenses are
+  excluded, same as the cost totals).
+- `hearts_modifier`: player-editable number input, starts at 0.
+- `current_hearts_total` (live-computed):
+  `hearts_last_year + hearts_this_year + hearts_modifier`.
+
+### 7. Year / Next Year
 - `year` counter, starts at 1, shown at the very bottom of the page next to
   a **Next Year** button.
 - Clicking Next Year:
