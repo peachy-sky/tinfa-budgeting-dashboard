@@ -425,7 +425,7 @@
       <tr><td>Current Jar Savings</td><td class="amt num">$<span id="current-jar-savings">0</span></td></tr>
       <tr>
         <td>New Jar Savings</td>
-        <td class="amt num income-cell">$<input type="number" id="new-jar-savings-input" class="income-input" min="0" step="100" aria-label="New Jar Savings"></td>
+        <td class="amt num income-cell">$<input type="number" id="new-jar-savings-input" class="income-input" step="100" aria-label="New Jar Savings"></td>
       </tr>
       <tr>
         <td>Jar Interest Rate</td>
@@ -726,7 +726,7 @@ document.getElementById('pretax-income-input').addEventListener('input', (e) => 
 });
 
 document.getElementById('new-jar-savings-input').addEventListener('input', (e) => {
-  state.new_jar_savings = Math.max(0, Number(e.target.value) || 0);
+  state.new_jar_savings = Number(e.target.value) || 0;
   render();
 });
 

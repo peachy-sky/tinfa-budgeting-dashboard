@@ -74,7 +74,9 @@ to stay valid if a tier change reduces that expense's max energy.
 ### 5. Interest Calculator
 - `current_jar_savings` (starts 0, display-only — only the Next Year button
   changes it).
-- `new_jar_savings`: player-editable number input (this year's contribution).
+- `new_jar_savings`: player-editable number input (this year's contribution
+  or withdrawal — negative values are allowed and reduce the effective jar
+  total for this year's interest calc and the Next Year rollover).
 - `jar_interest_rate`: player-editable number input; entering `3` means 3%
   (0.03) internally.
 - `earned_interest` (this year's interest, live-computed, not stored):
