@@ -78,7 +78,7 @@ to stay valid if a tier change reduces that expense's max energy.
 - `jar_interest_rate`: player-editable number input; entering `3` means 3%
   (0.03) internally.
 - `earned_interest` (this year's interest, live-computed, not stored):
-  `(current_jar_savings + new_jar_savings) * (1 + jar_interest_rate)`.
+  `(current_jar_savings + new_jar_savings) * jar_interest_rate`.
 
 ### 6. Year / Next Year
 - `year` counter, starts at 1, shown at the very bottom of the page next to

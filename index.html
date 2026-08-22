@@ -561,7 +561,7 @@ function availableEnergy() {
 }
 
 function earnedInterest() {
-  return (state.current_jar_savings + state.new_jar_savings) * (1 + state.jar_interest_rate / 100);
+  return (state.current_jar_savings + state.new_jar_savings) * (state.jar_interest_rate / 100);
 }
 
 // Groceries and Dining Out are hard-coded to move inversely: cooking more at
