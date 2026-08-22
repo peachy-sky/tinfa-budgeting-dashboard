@@ -60,6 +60,15 @@ Sourced from `In-Game Budgeting - Level 1.csv`:
 | Education (Trade School) | NEED | -$400 | 2 (−250 … −400) | 1 |
 | Pet | WANT | $0 | 1 (modifiers noted only) | 0 |
 
+#### Yearly reveal: Rent, Transit, Shopping, Education
+These four start **hidden** (not shown in the Expenses list, and excluded
+from every total/percentage/energy calc) at Year 1. Each Next Year click
+un-hides the next one, in this fixed order — Rent + Utilities, then
+Transit + Car + Gas, then Shopping, then Education (Trade School) — until
+all four are visible; further Next Year clicks then do nothing to the
+expense list. A revealed expense keeps its normal default cost tier/energy
+from that point on.
+
 #### Hard-coded special behavior: Groceries ↔ Dining Out
 These two move **inversely**: raising one's cost tier by one step
 automatically lowers the other's cost tier by one step (clamped at each

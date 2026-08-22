@@ -458,7 +458,7 @@ const state = {
 const expenses = [
   {
     key: 'rent', name: 'Rent + Utilities', category: 'NEED',
-    levelIndex: 0, energy: 0,
+    levelIndex: 0, energy: 0, hidden: true,
     levels: [
       { costs: [-200], note: 'living at home... minus 1/4 hearts/yr' },
       { costs: [-1000], note: 'minus 1/2 hearts/yr (bad apt)' },
@@ -511,7 +511,7 @@ const expenses = [
   },
   {
     key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
-    levelIndex: 1, energy: 0,
+    levelIndex: 1, energy: 0, hidden: true,
     levels: [
       { costs: [-100], note: 'no car, just bussin~ minus 1/2 heart/yr' },
       { costs: [-300], note: 'cheap car, 2x mod on maintenance :(' },
@@ -521,7 +521,7 @@ const expenses = [
   },
   {
     key: 'shopping', name: 'Shopping', category: 'WANT',
-    levelIndex: 2, energy: 0,
+    levelIndex: 2, energy: 0, hidden: true,
     levels: [
       { costs: [-200, -100], note: 'still gotta buy SOME things, like toiletries...' },
       { costs: [-450, -300], note: '' },
@@ -531,7 +531,7 @@ const expenses = [
   },
   {
     key: 'education', name: 'Education (Trade School)', category: 'NEED',
-    levelIndex: 1, energy: 0,
+    levelIndex: 1, energy: 0, hidden: true,
     levels: [
       { costs: [-250, -200], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
       { costs: [-400, -300], note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
@@ -546,6 +546,10 @@ const expenses = [
   },
 ];
 
+// Expenses added back one per year (in this order) via the Next Year button,
+// starting fully removed from the sheet.
+const pendingExpenses = ['rent', 'transit', 'shopping', 'education'];
+
 // ---------- Derived getters ----------
 function currentCost(exp) {
   return exp.levels[exp.levelIndex].costs[exp.energy];
@@ -553,8 +557,11 @@ function currentCost(exp) {
 function maxEnergy(exp) {
   return exp.levels[exp.levelIndex].costs.length - 1;
 }
+function visibleExpenses() {
+  return expenses.filter(e => !e.hidden);
+}
 function energySpentOnExpenses() {
-  return expenses.reduce((sum, e) => sum + e.energy, 0);
+  return visibleExpenses().reduce((sum, e) => sum + e.energy, 0);
 }
 function availableEnergy() {
   return state.total_energy - state.work_energy - energySpentOnExpenses();
@@ -586,12 +593,13 @@ function render() {
   const tax = Math.round(pretax * (state.income_tax_rate / 100));
   const posttax = pretax - tax;
 
-  const totalMonthly = expenses.reduce((sum, e) => sum + currentCost(e), 0);
+  const active = visibleExpenses();
+  const totalMonthly = active.reduce((sum, e) => sum + currentCost(e), 0);
   const totalAnnual = totalMonthly * 12;
   const annualSavings = posttax + totalAnnual; // totalAnnual is negative
 
-  const annualNeeds = expenses.filter(e => e.category === 'NEED').reduce((s, e) => s + currentCost(e), 0) * 12;
-  const annualWants = expenses.filter(e => e.category === 'WANT').reduce((s, e) => s + currentCost(e), 0) * 12;
+  const annualNeeds = active.filter(e => e.category === 'NEED').reduce((s, e) => s + currentCost(e), 0) * 12;
+  const annualWants = active.filter(e => e.category === 'WANT').reduce((s, e) => s + currentCost(e), 0) * 12;
 
   const needsPct = posttax ? Math.abs(annualNeeds) / posttax * 100 : 0;
   const wantsPct = posttax ? Math.abs(annualWants) / posttax * 100 : 0;
@@ -660,7 +668,7 @@ function renderExpenses() {
   list.innerHTML = '';
   const avail = availableEnergy();
 
-  expenses.forEach(exp => {
+  visibleExpenses().forEach(exp => {
     const row = document.createElement('div');
     row.className = 'expense-row';
 
@@ -735,12 +743,21 @@ document.getElementById('jar-interest-rate-input').addEventListener('input', (e)
   render();
 });
 
-// Advances the year counter and rolls this year's jar savings + interest into
-// current_jar_savings. Does not touch income, tax, or any expense state.
+// Advances the year counter, rolls this year's jar savings + interest into
+// current_jar_savings, and unhides the next pending expense category (in
+// pendingExpenses order) if any are left. Does not touch income, tax, or
+// any other expense's existing tier/energy state.
 document.getElementById('next-year-btn').addEventListener('click', () => {
   state.current_jar_savings += state.new_jar_savings + earnedInterest();
   state.year += 1;
   state.new_jar_savings = 0;
+
+  const nextKey = pendingExpenses.shift();
+  if (nextKey) {
+    const exp = expenses.find(e => e.key === nextKey);
+    if (exp) exp.hidden = false;
+  }
+
   render();
   document.getElementById('new-jar-savings-input').value = '';
 });
