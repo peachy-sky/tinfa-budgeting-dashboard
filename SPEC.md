@@ -96,7 +96,9 @@ Each expense's cost tier optionally carries a `hearts` value (fractional,
 e.g. ±0.25/±0.5/±1) sourced from the spreadsheet's HEARTS column — most
 tiers are 0. Only groceries, dining, healthcare, travel, transit, and rent
 carry non-zero values on some tiers; shopping and education are 0
-throughout in this revision.
+throughout in this revision. The current tier's value is shown per-row in
+a **Hearts** column in the Expenses ledger (a "—" for 0, otherwise signed
+e.g. "+0.25"/"−0.5", colored green/red).
 - `hearts_last_year`: starts at 5, display-only (not touched by Next Year).
 - `hearts_this_year` (live-computed): sum of `hearts` at the current tier
   of every **visible** expense (hidden/not-yet-revealed expenses are

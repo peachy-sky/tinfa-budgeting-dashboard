@@ -269,7 +269,7 @@
   /* ---------- Expense ledger ---------- */
   .ledger-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 168px 140px minmax(0, 1.3fr);
+    grid-template-columns: minmax(0, 1fr) 168px 72px 140px minmax(0, 1.3fr);
     gap: 14px;
     padding: 0 4px 8px;
     font-size: 0.68rem;
@@ -283,7 +283,7 @@
   #expense-list { display: flex; flex-direction: column; }
   .expense-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 168px 140px minmax(0, 1.3fr);
+    grid-template-columns: minmax(0, 1fr) 168px 72px 140px minmax(0, 1.3fr);
     align-items: center;
     gap: 14px;
     padding: 13px 4px;
@@ -304,6 +304,17 @@
   }
   .tag.NEED { background: var(--need-soft); color: var(--need); }
   .tag.WANT { background: var(--want-soft); color: var(--want); }
+
+  .hearts-cell {
+    text-align: center;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--ink-muted);
+  }
+  .hearts-cell.positive { color: var(--accent); }
+  .hearts-cell.negative { color: var(--danger); }
 
   .stepper { display: flex; align-items: center; gap: 8px; justify-content: center; }
   .stepper button {
@@ -407,6 +418,7 @@
     <div class="ledger-head">
       <div>Expense</div>
       <div style="text-align:center">Monthly cost</div>
+      <div style="text-align:center">Hearts</div>
       <div style="text-align:center">Energy</div>
       <div>Notes</div>
     </div>
@@ -589,6 +601,10 @@ function earnedInterest() {
 function currentHearts(exp) {
   return exp.levels[exp.levelIndex].hearts || 0;
 }
+function formatHearts(hearts) {
+  if (hearts === 0) return '—';
+  return `${hearts > 0 ? '+' : ''}${hearts}`;
+}
 function heartsThisYear() {
   return visibleExpenses().reduce((sum, e) => sum + currentHearts(e), 0);
 }
@@ -713,6 +729,8 @@ function renderExpenses() {
     const mEnergy = maxEnergy(exp);
     const canAddEnergy = exp.energy < mEnergy && avail > 0;
     const canRemoveEnergy = exp.energy > 0;
+    const hearts = currentHearts(exp);
+    const heartsClass = hearts > 0 ? 'positive' : hearts < 0 ? 'negative' : '';
 
     row.innerHTML = `
       <div class="name"><span class="tag ${exp.category}">${exp.category}</span>${exp.name}</div>
@@ -721,6 +739,7 @@ function renderExpenses() {
         <span class="value cost num">-$${Math.abs(cost).toLocaleString()}</span>
         <button data-action="level-up" ${canIncreaseLevel ? '' : 'disabled'} aria-label="Increase ${exp.name} cost">&oplus;</button>
       </div>
+      <div class="hearts-cell ${heartsClass}">${formatHearts(hearts)}</div>
       <div class="stepper energy-cell">
         <button data-action="energy-down" ${canRemoveEnergy ? '' : 'disabled'} aria-label="Remove energy from ${exp.name}">&ominus;</button>
         <div class="diamonds">${renderDiamonds(exp.energy, mEnergy)}</div>
