@@ -99,7 +99,8 @@ carry non-zero values on some tiers; shopping and education are 0
 throughout in this revision. The current tier's value is shown per-row in
 a **Hearts** column in the Expenses ledger (a "—" for 0, otherwise signed
 e.g. "+0.25"/"−0.5", colored green/red).
-- `hearts_last_year`: starts at 5, display-only (not touched by Next Year).
+- `hearts_last_year`: starts at 5, display-only to the player — updated only
+  by Next Year (see below).
 - `hearts_this_year` (live-computed): sum of `hearts` at the current tier
   of every **visible** expense (hidden/not-yet-revealed expenses are
   excluded, same as the cost totals).
@@ -112,6 +113,9 @@ e.g. "+0.25"/"−0.5", colored green/red).
   a **Next Year** button.
 - Clicking Next Year:
   - `current_jar_savings += new_jar_savings + earned_interest`
+  - `hearts_last_year += hearts_this_year + hearts_modifier` (computed
+    against this year's visible expenses, before that year's pending
+    expense reveal below takes effect); `hearts_modifier` is left as-is.
   - `year += 1`
   - `new_jar_savings` resets to 0 and its input is cleared to empty (ready
     for next year's contribution); `jar_interest_rate` is left as-is.

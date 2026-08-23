@@ -807,6 +807,7 @@ document.getElementById('hearts-modifier-input').addEventListener('input', (e) =
 // any other expense's existing tier/energy state.
 document.getElementById('next-year-btn').addEventListener('click', () => {
   state.current_jar_savings += state.new_jar_savings + earnedInterest();
+  state.hearts_last_year += heartsThisYear() + state.hearts_modifier;
   state.year += 1;
   state.new_jar_savings = 0;
 
