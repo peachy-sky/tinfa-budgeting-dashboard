@@ -409,6 +409,10 @@
     <table class="tax-table">
       <tr><td>Annual pre-tax income</td><td class="amt num income-cell">$<input type="number" id="pretax-income-input" class="income-input" min="0" step="500" aria-label="Annual pre-tax income"></td></tr>
       <tr><td>Income tax (<span id="tax-rate">0</span>%)</td><td class="amt num">$<span id="tax-amount">0</span></td></tr>
+      <tr>
+        <td>Modifier</td>
+        <td class="amt num income-cell">$<input type="number" id="income-modifier-input" class="income-input" step="100" aria-label="Income Modifier"></td>
+      </tr>
       <tr class="total"><td>Annual post-tax income</td><td class="amt num">$<span id="posttax-income">0</span></td></tr>
     </table>
   </section>
@@ -471,6 +475,7 @@
 const state = {
   annual_pretax_income: 15000,
   income_tax_rate: 0, // %
+  income_modifier: 0,
   total_energy: 7,
   work_energy: 3, // fixed energy baked into the $15,000 income, not player-adjustable in this MVP
   year: 1,
@@ -632,7 +637,7 @@ function changeLevel(exp, delta) {
 function render() {
   const pretax = state.annual_pretax_income;
   const tax = Math.round(pretax * (state.income_tax_rate / 100));
-  const posttax = pretax - tax;
+  const posttax = pretax - tax + state.income_modifier;
 
   const active = visibleExpenses();
   const totalMonthly = active.reduce((sum, e) => sum + currentCost(e), 0);
@@ -653,6 +658,10 @@ function render() {
   }
   document.getElementById('tax-rate').textContent = state.income_tax_rate;
   document.getElementById('tax-amount').textContent = tax.toLocaleString();
+  const incomeModifierInput = document.getElementById('income-modifier-input');
+  if (document.activeElement !== incomeModifierInput) {
+    incomeModifierInput.value = state.income_modifier;
+  }
   document.getElementById('posttax-income').textContent = posttax.toLocaleString();
   document.getElementById('posttax-income-label').textContent = posttax.toLocaleString();
 
@@ -783,6 +792,11 @@ function renderDiamonds(energy, mEnergy) {
 document.getElementById('pretax-income-input').addEventListener('input', (e) => {
   const value = Math.max(0, Math.round(Number(e.target.value)) || 0);
   state.annual_pretax_income = value;
+  render();
+});
+
+document.getElementById('income-modifier-input').addEventListener('input', (e) => {
+  state.income_modifier = Number(e.target.value) || 0;
   render();
 });
 

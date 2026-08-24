@@ -32,9 +32,12 @@ not player-adjustable in this MVP.
 
 ### 2. Income
 - Annual pre-tax income is a player-editable number input (min 0); tax
-  amount (from the hard-coded rate) and post-tax income recompute live as
-  it changes, cascading into the needs/wants/savings percentages, the pie
-  chart, and the over-budget alert.
+  amount (from the hard-coded rate) recomputes live as it changes.
+- `income_modifier`: player-editable number input, starts at 0. Negative
+  values are allowed and subtract from post-tax income.
+- Annual post-tax income = `annual_pretax_income - tax_amount +
+  income_modifier`, live-computed, cascading into the needs/wants/savings
+  percentages, the pie chart, and the over-budget alert.
 
 ### 3. Expenses (the only player-editable section)
 Each expense has:
