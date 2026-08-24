@@ -50,6 +50,14 @@ Each expense has:
   like Pet) — so e.g. Dining Out's bar reads visibly longer than Transit's.
   The track's actual rendered width is `min(that scaled px value, 100%)`,
   so it never overflows a narrow (mobile) viewport.
+  Dragging is driven by custom `pointerdown`/`pointermove`/`pointerup`
+  logic (not the browser's native track-following), because native range
+  inputs stop tracking the instant the cursor leaves their bounds — the
+  custom handler computes the tier from the pointer's X position relative
+  to the track for as long as the button/touch is held, no matter how far
+  outside the track the cursor strays, clamped to that track's own
+  min/max either way. Keyboard interaction (arrow keys, etc.) still goes
+  through the native default action.
 - An **energy** ladder layered on the current cost tier: spending energy
   (◆ diamonds, ⊖/⊕) further reduces that tier's cost, up to a per-expense max
   (0–2), bounded by `available_energy`.

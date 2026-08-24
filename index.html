@@ -844,7 +844,51 @@ function buildExpenseRow(exp) {
     notes: row.querySelector('.notes'),
   };
 
+  // Native range inputs stop tracking the drag the moment the cursor leaves
+  // their (often short) track, which reads as a broken/sticky slider. This
+  // computes the value from the pointer's position ourselves via
+  // document-level listeners, so the slider keeps following the cursor for
+  // as long as the button/touch is held, no matter where the cursor
+  // physically is — clamped to the track's own min/max either way.
+  let dragging = false;
+
+  function levelFromClientX(clientX) {
+    const rect = refs.costSlider.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+    const clamped = Math.min(1, Math.max(0, ratio));
+    return Math.round(clamped * Number(refs.costSlider.max));
+  }
+
+  function applyLevelFromClientX(clientX) {
+    const newLevelIndex = levelFromClientX(clientX);
+    if (newLevelIndex !== exp.levelIndex) {
+      changeLevel(exp, newLevelIndex - exp.levelIndex);
+      render();
+    }
+  }
+
+  function onPointerMove(e) {
+    if (dragging) applyLevelFromClientX(e.clientX);
+  }
+  function onPointerUp() {
+    dragging = false;
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+  }
+
+  refs.costSlider.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); // suppress native drag tracking; we drive value updates ourselves
+    refs.costSlider.focus();
+    dragging = true;
+    applyLevelFromClientX(e.clientX);
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+  });
+
+  // Keyboard (arrow keys etc.) still uses the native default action, which
+  // fires a normal 'input' event.
   refs.costSlider.addEventListener('input', (e) => {
+    if (dragging) return;
     const newLevelIndex = Number(e.target.value);
     changeLevel(exp, newLevelIndex - exp.levelIndex);
     render();
@@ -866,9 +910,7 @@ function updateExpenseRow(exp, refs, avail) {
   const mEnergy = maxEnergy(exp);
   const hearts = currentHearts(exp);
 
-  if (document.activeElement !== refs.costSlider) {
-    refs.costSlider.value = exp.levelIndex;
-  }
+  refs.costSlider.value = exp.levelIndex;
   refs.costSlider.max = exp.levels.length - 1;
   refs.costValue.textContent = `-$${Math.abs(cost).toLocaleString()}`;
 
