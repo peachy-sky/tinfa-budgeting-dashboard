@@ -62,7 +62,12 @@ Each expense has:
   through the native default action.
 - An **energy** ladder layered on the current cost tier: spending energy
   (◆ diamonds, ⊖/⊕) further reduces that tier's cost, up to a per-expense max
-  (0–2), bounded by `available_energy`.
+  (0–2), bounded by `available_energy`. When energy actually lowers the
+  price (i.e. the current tier's energy-0 cost differs from its cost at
+  the current energy spend), the pre-energy price is shown struck through
+  next to the new price, which turns green (`--accent`). Spending energy
+  on a tier where all energy levels cost the same (e.g. Groceries' cheapest
+  tier) shows no strikethrough, since there's no real discount to call out.
 - A **notes** field surfaced as-is from the spreadsheet (flavor text and any
   "modifier" callouts — modifiers are noted only, not mechanically applied),
   shown as a sub-line directly under the expense name (there is no separate

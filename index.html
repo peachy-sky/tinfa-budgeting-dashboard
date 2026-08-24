@@ -350,13 +350,28 @@
     gap: 10px;
     min-width: 0;
   }
-  .cost-slider-cell .value.cost {
+  .cost-values {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
     min-width: 64px;
     flex-shrink: 0;
+  }
+  .cost-slider-cell .value.cost {
     text-align: right;
     font-weight: 700;
     font-size: 0.94rem;
   }
+  .cost-slider-cell .value.cost.discounted { color: var(--accent); }
+  .cost-slider-cell .value.cost-original {
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.94rem;
+    color: var(--ink-muted);
+    text-decoration: line-through;
+  }
+  .cost-slider-cell .value.cost-original:empty { display: none; }
   .cost-slider {
     -webkit-appearance: none;
     appearance: none;
@@ -819,7 +834,10 @@ function buildExpenseRow(exp) {
       <span class="notes"></span>
     </div>
     <div class="cost-slider-cell">
-      <span class="value cost num"></span>
+      <div class="cost-values">
+        <span class="value cost-original num"></span>
+        <span class="value cost num"></span>
+      </div>
       <input type="range" class="cost-slider" style="--track-width: ${trackWidth}px"
         min="0" max="${exp.levels.length - 1}" step="1" aria-label="${exp.name} monthly cost">
     </div>
@@ -834,6 +852,7 @@ function buildExpenseRow(exp) {
   const refs = {
     row,
     costSlider: row.querySelector('.cost-slider'),
+    costOriginal: row.querySelector('.value.cost-original'),
     costValue: row.querySelector('.value.cost'),
     heartsCell: row.querySelector('.hearts-cell'),
     diamonds: row.querySelector('.diamonds'),
@@ -910,7 +929,12 @@ function updateExpenseRow(exp, refs, avail) {
 
   refs.costSlider.value = exp.levelIndex;
   refs.costSlider.max = exp.levels.length - 1;
+
+  const baselineCost = exp.levels[exp.levelIndex].costs[0];
+  const isDiscounted = exp.energy > 0 && baselineCost !== cost;
+  refs.costOriginal.textContent = isDiscounted ? `-$${Math.abs(baselineCost).toLocaleString()}` : '';
   refs.costValue.textContent = `-$${Math.abs(cost).toLocaleString()}`;
+  refs.costValue.classList.toggle('discounted', isDiscounted);
 
   refs.heartsCell.textContent = formatHearts(hearts);
   refs.heartsCell.className = 'hearts-cell ' + (hearts > 0 ? 'positive' : hearts < 0 ? 'negative' : '');
