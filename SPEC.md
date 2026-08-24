@@ -41,13 +41,25 @@ not player-adjustable in this MVP.
 
 ### 3. Expenses (the only player-editable section)
 Each expense has:
-- A **cost tier** ladder, stepped with ⊖/⊕ (manual increase/decrease of
-  monthly cost).
+- A **cost tier** slider (`<input type="range">`, discrete steps, one per
+  spreadsheet tier) — dragging or using arrow keys moves through the tier
+  ladder; the native `min="0"` means the player can never go below the
+  cheapest tier. Each expense's track width is scaled to its own priciest
+  tier relative to the priciest tier across all expenses (Rent's -$4,000 is
+  the reference max, 180px; -$4,000 = 180px down to a 24px floor for a
+  $0-range expense like Pet) — so e.g. Dining Out's bar reads visibly
+  longer than Transit's.
 - An **energy** ladder layered on the current cost tier: spending energy
   (◆ diamonds, ⊖/⊕) further reduces that tier's cost, up to a per-expense max
   (0–2), bounded by `available_energy`.
 - A **notes** field surfaced as-is from the spreadsheet (flavor text and any
   "modifier" callouts — modifiers are noted only, not mechanically applied).
+
+Row DOM nodes are built once per expense and updated in place on every
+render rather than destroyed/recreated, so dragging a slider isn't
+interrupted mid-gesture; the slider currently focused/being dragged skips
+having its value overwritten, while every other row (notably an
+inverse-linked partner) still updates live.
 
 Sourced from `In-Game Budgeting - Level 1.csv`:
 
@@ -73,11 +85,13 @@ expense list. A revealed expense keeps its normal default cost tier/energy
 from that point on.
 
 #### Hard-coded special behavior: Groceries ↔ Dining Out
-These two move **inversely**: raising one's cost tier by one step
-automatically lowers the other's cost tier by one step (clamped at each
-one's own bounds), representing "cook more at home → eat out less" and vice
-versa. Energy spent on either is unaffected by the link, but is re-clamped
-to stay valid if a tier change reduces that expense's max energy.
+These two move **inversely**: raising one's cost tier by N steps
+automatically lowers the other's cost tier by N steps (clamped at each
+one's own bounds — dragging a slider can jump multiple tiers in one
+gesture, not just ±1), representing "cook more at home → eat out less" and
+vice versa. Energy spent on either is unaffected by the link, but is
+re-clamped to stay valid if a tier change reduces that expense's max
+energy.
 
 ### 4. Totals
 - `total_monthly_expense`, `total_annual_expense`, `total_annual_savings`
