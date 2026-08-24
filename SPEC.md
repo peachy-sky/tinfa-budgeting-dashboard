@@ -46,14 +46,17 @@ Each expense has:
   ladder; the native `min="0"` means the player can never go below the
   cheapest tier. Each expense's track width is scaled to its own priciest
   tier relative to the priciest tier across all expenses (Rent's -$4,000 is
-  the reference max, 180px; -$4,000 = 180px down to a 24px floor for a
-  $0-range expense like Pet) — so e.g. Dining Out's bar reads visibly
-  longer than Transit's.
+  the reference max, 420px, down to a 48px floor for a $0-range expense
+  like Pet) — so e.g. Dining Out's bar reads visibly longer than Transit's.
+  The track's actual rendered width is `min(that scaled px value, 100%)`,
+  so it never overflows a narrow (mobile) viewport.
 - An **energy** ladder layered on the current cost tier: spending energy
   (◆ diamonds, ⊖/⊕) further reduces that tier's cost, up to a per-expense max
   (0–2), bounded by `available_energy`.
 - A **notes** field surfaced as-is from the spreadsheet (flavor text and any
-  "modifier" callouts — modifiers are noted only, not mechanically applied).
+  "modifier" callouts — modifiers are noted only, not mechanically applied),
+  shown as a sub-line directly under the expense name (there is no separate
+  Notes column).
 
 Row DOM nodes are built once per expense and updated in place on every
 render rather than destroyed/recreated, so dragging a slider isn't

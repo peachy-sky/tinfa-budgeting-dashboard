@@ -269,7 +269,7 @@
   /* ---------- Expense ledger ---------- */
   .ledger-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 236px 72px 140px minmax(0, 1.3fr);
+    grid-template-columns: minmax(180px, 260px) minmax(280px, 1fr) 72px 140px;
     gap: 14px;
     padding: 0 4px 8px;
     font-size: 0.68rem;
@@ -283,7 +283,7 @@
   #expense-list { display: flex; flex-direction: column; }
   .expense-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 236px 72px 140px minmax(0, 1.3fr);
+    grid-template-columns: minmax(180px, 260px) minmax(280px, 1fr) 72px 140px;
     align-items: center;
     gap: 14px;
     padding: 13px 4px;
@@ -291,7 +291,7 @@
   }
   .expense-row:hover { background: var(--surface-2); }
 
-  .expense-row .name { font-weight: 600; font-size: 0.94rem; }
+  .expense-row .name-title { font-weight: 600; font-size: 0.94rem; }
   .expense-row .name .tag {
     display: inline-block;
     font-size: 0.62rem;
@@ -304,6 +304,16 @@
   }
   .tag.NEED { background: var(--need-soft); color: var(--need); }
   .tag.WANT { background: var(--want-soft); color: var(--want); }
+  .expense-row .name .notes {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+  .expense-row .name .notes:empty { display: none; }
 
   .hearts-cell {
     text-align: center;
@@ -338,6 +348,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
   .cost-slider-cell .value.cost {
     min-width: 64px;
@@ -349,12 +360,12 @@
   .cost-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: var(--track-width, 60px);
-    max-width: 100%;
+    width: min(var(--track-width, 60px), 100%);
     height: 16px;
     background: transparent;
     cursor: pointer;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
   }
   .cost-slider::-webkit-slider-runnable-track {
     height: 4px;
@@ -401,7 +412,6 @@
   .diamond.filled { background: var(--gold); border-color: var(--gold); }
   .diamond.disabled { opacity: 0.22; }
 
-  .notes { font-size: 0.78rem; color: var(--ink-muted); font-style: italic; line-height: 1.4; }
 
   /* ---------- Totals ---------- */
   .totals {
@@ -480,7 +490,6 @@
       <div style="text-align:center">Monthly cost</div>
       <div style="text-align:center">Hearts</div>
       <div style="text-align:center">Energy</div>
-      <div>Notes</div>
     </div>
     <div id="expense-list"></div>
   </section>
@@ -653,8 +662,8 @@ function visibleExpenses() {
 // to the priciest tier across ALL expenses (Rent's -$4,000), so e.g. Dining
 // Out's bar is visibly longer than Transit's, regardless of which
 // expenses happen to be revealed yet.
-const SLIDER_MIN_PX = 24;
-const SLIDER_MAX_PX = 180;
+const SLIDER_MIN_PX = 48;
+const SLIDER_MAX_PX = 420;
 function expenseMaxCostAbs(exp) {
   return Math.max(...exp.levels.map(l => Math.abs(l.costs[0])));
 }
@@ -807,7 +816,10 @@ function buildExpenseRow(exp) {
   const trackWidth = sliderWidthPx(exp);
 
   row.innerHTML = `
-    <div class="name"><span class="tag ${exp.category}">${exp.category}</span>${exp.name}</div>
+    <div class="name">
+      <span class="name-title"><span class="tag ${exp.category}">${exp.category}</span>${exp.name}</span>
+      <span class="notes"></span>
+    </div>
     <div class="cost-slider-cell">
       <span class="value cost num"></span>
       <input type="range" class="cost-slider" style="--track-width: ${trackWidth}px"
@@ -819,7 +831,6 @@ function buildExpenseRow(exp) {
       <div class="diamonds"></div>
       <button data-action="energy-up" aria-label="Add energy to ${exp.name}">&oplus;</button>
     </div>
-    <div class="notes"></div>
   `;
 
   const refs = {
