@@ -129,9 +129,13 @@ Each expense's cost tier optionally carries a `hearts` value (fractional,
 e.g. ±0.25/±0.5/±1) sourced from the spreadsheet's HEARTS column — most
 tiers are 0. Only groceries, dining, healthcare, travel, transit, and rent
 carry non-zero values on some tiers; shopping and education are 0
-throughout in this revision. The current tier's value is shown per-row in
-a **Hearts** column in the Expenses ledger (a "—" for 0, otherwise signed
-e.g. "+0.25"/"−0.5", colored green/red).
+throughout in this revision. Healthcare additionally has a flat
+`energyHeartsBonus` of +0.25 hearts applied whenever any energy is spent
+on it (regardless of tier or how much energy, 1 or 2) — this is separate
+from and additive with the tier's own `hearts` value. The current
+(tier + energy bonus) total is shown per-row in a **Hearts** column in the
+Expenses ledger (a "—" for 0, otherwise signed e.g. "+0.25"/"−0.5",
+colored green/red).
 - `hearts_last_year`: starts at 5, display-only to the player — updated only
   by Next Year (see below).
 - `hearts_this_year` (live-computed): sum of `hearts` at the current tier

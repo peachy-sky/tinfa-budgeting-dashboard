@@ -601,7 +601,7 @@ const expenses = [
   },
   {
     key: 'healthcare', name: 'Healthcare', category: 'NEED',
-    levelIndex: 0, energy: 0,
+    levelIndex: 0, energy: 0, energyHeartsBonus: 0.25,
     levels: [
       { costs: [0, 0], hearts: 0, note: "on parents' healthcare til 26! / working out feels good!" },
       { costs: [-150, -100], hearts: 0, note: '2x modifier on healthcare costs... / working out feels good!' },
@@ -696,7 +696,9 @@ function earnedInterest() {
 }
 
 function currentHearts(exp) {
-  return exp.levels[exp.levelIndex].hearts || 0;
+  const tierHearts = exp.levels[exp.levelIndex].hearts || 0;
+  const energyBonus = exp.energy > 0 ? (exp.energyHeartsBonus || 0) : 0;
+  return tierHearts + energyBonus;
 }
 function formatHearts(hearts) {
   if (hearts === 0) return '—';
