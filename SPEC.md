@@ -109,15 +109,22 @@ vice versa. Energy spent on either is unaffected by the link, but is
 re-clamped to stay valid if a tier change reduces that expense's max
 energy.
 
-#### "Set to Lowest Costs" button
-Bottom-left of the Expenses block. Jumps hard-coded expenses to hard-coded
-tiers, bypassing the normal slider/inverse-link interaction entirely
-(energy is left as-is, just re-clamped to the new tier's max):
-- Groceries + Cooking @ Home → its **priciest** tier (the only expense set
-  to its max, not its min).
-- Dining Out, Healthcare, Travel + Vacations + Experiences, Pet, and any
-  other currently-revealed expense (Rent, Transit, Shopping, Education) →
-  each expense's **cheapest** tier.
+#### "Reset to Lowest Costs" button
+Bottom-left of the Expenses block. Two steps, both bypassing the normal
+slider/inverse-link interaction entirely:
+1. Jumps hard-coded expenses to hard-coded tiers — Groceries + Cooking @
+   Home → its **priciest** tier (the only expense set to its max, not its
+   min); Dining Out, Healthcare, Travel + Vacations + Experiences, Pet, and
+   any other currently-revealed expense (Rent, Transit, Shopping,
+   Education) → each expense's **cheapest** tier.
+2. With those tiers now fixed, spends the player's full available energy
+   budget (`total_energy - work_energy`) across the revealed expenses
+   however saves the most total money — solved as a multiple-choice
+   knapsack (`optimalEnergyAllocation`, a small memoized recursion) rather
+   than greedily per-expense, so it correctly finds the globally best
+   split even when marginal savings differ across expenses (e.g. it may
+   spend 2 energy on one expense and skip another entirely if that beats
+   spreading 1 energy across more expenses).
 
 ### 4. Totals
 - `total_monthly_expense`, `total_annual_expense`, `total_annual_savings`

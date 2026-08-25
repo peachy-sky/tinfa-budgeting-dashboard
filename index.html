@@ -529,7 +529,7 @@
     </div>
     <div id="expense-list"></div>
     <div class="expenses-footer">
-      <button type="button" id="set-lowest-btn" class="set-lowest-btn">Set to Lowest Costs</button>
+      <button type="button" id="set-lowest-btn" class="set-lowest-btn">Reset to Lowest Costs</button>
     </div>
   </section>
 
@@ -733,6 +733,40 @@ function heartsThisYear() {
 }
 function currentHeartsTotal() {
   return state.hearts_last_year + heartsThisYear() + state.hearts_modifier;
+}
+
+// Multiple-choice knapsack: for a fixed set of expenses (each already at
+// its current cost tier) and a total energy budget, finds how many energy
+// points (0..that expense's own max) to put on each expense to maximize
+// total dollars saved. Small search space (few expenses, budget <= a
+// handful), so a memoized recursion over every combination is simplest and
+// guaranteed optimal — no assumption that later energy points save less
+// than earlier ones is needed.
+function optimalEnergyAllocation(expList, budget) {
+  const memo = new Map();
+  function solve(i, remaining) {
+    if (i === expList.length) return { savings: 0, alloc: {} };
+    const key = i + ':' + remaining;
+    if (memo.has(key)) return memo.get(key);
+    const exp = expList[i];
+    const baseline = exp.levels[exp.levelIndex].costs[0];
+    const cap = Math.min(maxEnergy(exp), remaining);
+    let best = null;
+    for (let e = 0; e <= cap; e++) {
+      // costs are negative dollar amounts, so a smaller magnitude (cheaper)
+      // cost at higher energy is a *larger* (less negative) number —
+      // savings is how much closer to zero it got, i.e. cost(e) - baseline.
+      const savingsHere = exp.levels[exp.levelIndex].costs[e] - baseline;
+      const rest = solve(i + 1, remaining - e);
+      const total = savingsHere + rest.savings;
+      if (!best || total > best.savings) {
+        best = { savings: total, alloc: { ...rest.alloc, [exp.key]: e } };
+      }
+    }
+    memo.set(key, best);
+    return best;
+  }
+  return solve(0, budget).alloc;
 }
 
 // Groceries and Dining Out are hard-coded to move inversely: cooking more at
@@ -1046,14 +1080,14 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
 
 // Jumps specific expenses to hard-coded tiers: Groceries to its priciest
 // tier, everything else (Dining, Healthcare, Travel, Pet, and any other
-// revealed expense) to its cheapest tier. Energy is left untouched but
-// re-clamped in case the new tier has a lower max energy.
+// revealed expense) to its cheapest tier. Then, with those tiers fixed,
+// spends the full available energy budget wherever it saves the most
+// money overall (not just greedily per-expense).
 document.getElementById('set-lowest-btn').addEventListener('click', () => {
   function setLevel(key, levelIndex) {
     const exp = expenses.find(e => e.key === key);
     if (!exp) return;
     exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, levelIndex));
-    exp.energy = Math.min(exp.energy, maxEnergy(exp));
   }
 
   const groceries = expenses.find(e => e.key === 'groceries');
@@ -1063,6 +1097,12 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
   setLevel('travel', 0);
   setLevel('pet', 0);
   ['rent', 'transit', 'shopping', 'education'].forEach(key => setLevel(key, 0));
+
+  const budget = state.total_energy - state.work_energy;
+  const alloc = optimalEnergyAllocation(visibleExpenses(), budget);
+  visibleExpenses().forEach(exp => {
+    exp.energy = alloc[exp.key] || 0;
+  });
 
   render();
 });
