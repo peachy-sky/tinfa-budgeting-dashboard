@@ -34,6 +34,9 @@
     --danger: #b5473c;
     --danger-soft: #f0d3cd;
     --shadow: rgba(42, 40, 32, 0.10);
+    --tan-btn: #b9a06a;
+    --tan-btn-hover: #a88e56;
+    --tan-btn-ink: #2a2318;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -56,6 +59,9 @@
       --danger: #e08b7f;
       --danger-soft: #4a2c26;
       --shadow: rgba(0, 0, 0, 0.35);
+      --tan-btn: #a88a52;
+      --tan-btn-hover: #bd9d61;
+      --tan-btn-ink: #211c11;
     }
   }
   :root[data-theme="dark"] {
@@ -77,6 +83,9 @@
     --danger: #e08b7f;
     --danger-soft: #4a2c26;
     --shadow: rgba(0, 0, 0, 0.35);
+    --tan-btn: #a88a52;
+    --tan-btn-hover: #bd9d61;
+    --tan-btn-ink: #211c11;
   }
 
   * { box-sizing: border-box; }
@@ -273,19 +282,19 @@
   }
   .set-lowest-btn {
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
-    font-size: 0.82rem;
+    font-size: 1.23rem;
     font-weight: 600;
-    color: var(--ink-muted);
-    background: transparent;
-    border: 1.5px solid var(--rule);
+    color: var(--tan-btn-ink);
+    background: var(--tan-btn);
+    border: 2px solid var(--tan-btn);
     border-radius: 999px;
-    padding: 8px 16px;
+    padding: 12px 24px;
     cursor: pointer;
-    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
   }
-  .set-lowest-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .set-lowest-btn:hover { background: var(--tan-btn-hover); border-color: var(--tan-btn-hover); }
   .set-lowest-btn:active { transform: scale(0.97); }
-  .set-lowest-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .set-lowest-btn:focus-visible { outline: 2px solid var(--tan-btn); outline-offset: 3px; }
 
   /* ---------- Expense ledger ---------- */
   .ledger-head {
