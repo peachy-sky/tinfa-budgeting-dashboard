@@ -46,7 +46,7 @@ Each expense has:
   ladder; the native `min="0"` means the player can never go below the
   cheapest tier. Each expense's track width is scaled to its own priciest
   tier relative to the priciest tier across all expenses (currently Rent's
-  -$3,000 — this is derived from the data, not hard-coded, so it
+  -$2,500 — this is derived from the data, not hard-coded, so it
   automatically rescales if the spreadsheet's priciest tier changes; 420px
   at the reference max, down to a 48px floor for a $0-range expense like
   Pet) — so e.g. Dining Out's bar reads visibly longer than Transit's.
@@ -81,9 +81,9 @@ Sourced from `In-Game Budgeting - Level 1.csv`:
 
 | Expense | Category | Default cost | Cost tiers | Max energy |
 |---|---|---|---|---|
-| Rent + Utilities | NEED | -$200 | 6 (−200 … −3000) | 0 |
+| Rent + Utilities | NEED | -$200 | 5 (−200 … −2500) | 0 |
 | Groceries + Cooking @ Home | NEED | -$50 | 4 (−50 … −400) | 2 |
-| Dining Out | WANT | -$2,300 | 4 (−120 … −2300) | 1 |
+| Dining Out | WANT | -$2,000 | 4 (−120 … −2000) | 1 (no discount on top tier) |
 | Healthcare | NEED | $0 | 4 ($0 … −300) | 1 |
 | Travel + Vacations + Experiences | WANT | -$300 | 3 (−100 … −1000) | 1 |
 | Transit + Car + Gas | NEED | -$300 | 4 (−100 … −700) | 0 |
