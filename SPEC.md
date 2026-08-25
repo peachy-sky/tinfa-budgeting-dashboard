@@ -109,6 +109,16 @@ vice versa. Energy spent on either is unaffected by the link, but is
 re-clamped to stay valid if a tier change reduces that expense's max
 energy.
 
+#### "Set to Lowest Costs" button
+Bottom-left of the Expenses block. Jumps hard-coded expenses to hard-coded
+tiers, bypassing the normal slider/inverse-link interaction entirely
+(energy is left as-is, just re-clamped to the new tier's max):
+- Groceries + Cooking @ Home → its **priciest** tier (the only expense set
+  to its max, not its min).
+- Dining Out, Healthcare, Travel + Vacations + Experiences, Pet, and any
+  other currently-revealed expense (Rent, Transit, Shopping, Education) →
+  each expense's **cheapest** tier.
+
 ### 4. Totals
 - `total_monthly_expense`, `total_annual_expense`, `total_annual_savings`
   (turns red if negative, i.e. overspending).

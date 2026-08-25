@@ -266,6 +266,27 @@
   .next-year-btn:active { transform: scale(0.96); }
   .next-year-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
+  .expenses-footer {
+    display: flex;
+    justify-content: flex-start;
+    padding-top: 16px;
+  }
+  .set-lowest-btn {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    background: transparent;
+    border: 1.5px solid var(--rule);
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .set-lowest-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .set-lowest-btn:active { transform: scale(0.97); }
+  .set-lowest-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   /* ---------- Expense ledger ---------- */
   .ledger-head {
     display: grid;
@@ -507,6 +528,9 @@
       <div style="text-align:center">Energy</div>
     </div>
     <div id="expense-list"></div>
+    <div class="expenses-footer">
+      <button type="button" id="set-lowest-btn" class="set-lowest-btn">Set to Lowest Costs</button>
+    </div>
   </section>
 
   <div class="totals">
@@ -1018,6 +1042,29 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
 
   render();
   document.getElementById('new-jar-savings-input').value = '';
+});
+
+// Jumps specific expenses to hard-coded tiers: Groceries to its priciest
+// tier, everything else (Dining, Healthcare, Travel, Pet, and any other
+// revealed expense) to its cheapest tier. Energy is left untouched but
+// re-clamped in case the new tier has a lower max energy.
+document.getElementById('set-lowest-btn').addEventListener('click', () => {
+  function setLevel(key, levelIndex) {
+    const exp = expenses.find(e => e.key === key);
+    if (!exp) return;
+    exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, levelIndex));
+    exp.energy = Math.min(exp.energy, maxEnergy(exp));
+  }
+
+  const groceries = expenses.find(e => e.key === 'groceries');
+  setLevel('groceries', groceries.levels.length - 1); // most expensive
+  setLevel('dining', 0);
+  setLevel('healthcare', 0);
+  setLevel('travel', 0);
+  setLevel('pet', 0);
+  ['rent', 'transit', 'shopping', 'education'].forEach(key => setLevel(key, 0));
+
+  render();
 });
 
 render();
