@@ -16,6 +16,7 @@
     font-display: swap;
   }
   :root {
+    --ledger-cols: minmax(180px, 260px) minmax(280px, 1fr) 72px 140px;
     --paper: #ece7d9;
     --surface: #f8f5eb;
     --surface-2: #efe9da;
@@ -166,20 +167,6 @@
   .pct.wants { background: var(--want-soft); color: var(--want); }
   .pct.savings { background: var(--accent-soft); color: var(--accent); }
 
-  .energy-box {
-    margin-top: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1.5px solid var(--rule);
-    border-radius: 999px;
-    padding: 6px 14px 6px 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--ink-muted);
-  }
-  .energy-box .bolt { color: var(--gold); font-size: 1rem; }
-  .energy-box .num { color: var(--ink); font-size: 0.95rem; }
 
   .pie-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
   #pie-chart {
@@ -297,9 +284,30 @@
   .set-lowest-btn:focus-visible { outline: 2px solid var(--tan-btn); outline-offset: 3px; }
 
   /* ---------- Expense ledger ---------- */
+  .energy-pool-row {
+    display: grid;
+    grid-template-columns: var(--ledger-cols);
+    gap: 14px;
+    padding: 0 4px 10px;
+  }
+  .energy-pool-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .energy-pool-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+  .energy-pool-label .num { color: var(--ink); }
+  .energy-pool-cell .diamonds { justify-content: flex-end; }
+
   .ledger-head {
     display: grid;
-    grid-template-columns: minmax(180px, 260px) minmax(280px, 1fr) 72px 140px;
+    grid-template-columns: var(--ledger-cols);
     gap: 14px;
     padding: 0 4px 8px;
     font-size: 0.68rem;
@@ -313,7 +321,7 @@
   #expense-list { display: flex; flex-direction: column; }
   .expense-row {
     display: grid;
-    grid-template-columns: minmax(180px, 260px) minmax(280px, 1fr) 72px 140px;
+    grid-template-columns: var(--ledger-cols);
     align-items: center;
     gap: 14px;
     padding: 13px 4px;
@@ -356,23 +364,7 @@
   .hearts-cell.positive { color: var(--accent); }
   .hearts-cell.negative { color: var(--danger); }
 
-  .stepper { display: flex; align-items: center; gap: 8px; justify-content: center; }
-  .stepper button {
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    border: 1.5px solid var(--line);
-    background: var(--surface);
-    color: var(--ink);
-    font-size: 0.9rem;
-    cursor: pointer;
-    line-height: 1;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.12s ease, transform 0.08s ease;
-  }
-  .stepper button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-  .stepper button:active:not(:disabled) { transform: scale(0.92); }
-  .stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .stepper button:disabled { opacity: 0.28; cursor: not-allowed; }
+  .energy-cell { display: flex; align-items: center; }
 
   .cost-slider-cell {
     display: flex;
@@ -447,15 +439,40 @@
   .cost-slider:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
   .cost-slider:focus-visible::-moz-range-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .energy-cell .diamonds { display: flex; gap: 4px; }
+  .diamonds { display: flex; gap: 4px; }
   .diamond {
-    width: 11px; height: 11px;
+    width: 13px; height: 13px;
     transform: rotate(45deg);
     border: 1.5px solid var(--rule);
     background: var(--surface);
+    transition: transform 0.08s ease;
   }
-  .diamond.filled { background: var(--gold); border-color: var(--gold); }
+  .diamond.filled { background: var(--gold); border-color: var(--gold); cursor: grab; touch-action: none; }
+  .diamond.filled:active { cursor: grabbing; }
+  .diamond.filled:hover { transform: rotate(45deg) scale(1.15); }
   .diamond.disabled { opacity: 0.22; }
+
+  .energy-drop-target {
+    border-radius: 6px;
+    outline: 2px dashed transparent;
+    outline-offset: 3px;
+    transition: outline-color 0.1s ease, background 0.1s ease;
+  }
+  .energy-drop-target.drag-over { outline-color: var(--accent); background: var(--accent-soft); }
+
+  .drag-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 15px;
+    height: 15px;
+    background: var(--gold);
+    border: 1.5px solid var(--gold);
+    box-shadow: 0 2px 8px var(--shadow);
+    transform: translate(-50%, -50%) rotate(45deg);
+    pointer-events: none;
+    z-index: 1000;
+  }
 
 
   /* ---------- Totals ---------- */
@@ -483,12 +500,15 @@
 
   @media (max-width: 760px) {
     .ledger-head { display: none; }
+    .energy-pool-row {
+      display: flex;
+      justify-content: flex-end;
+    }
     .expense-row {
       grid-template-columns: 1fr;
       gap: 8px;
       padding: 14px 4px;
     }
-    .stepper { justify-content: flex-start; }
     .totals { margin-left: 0; max-width: none; }
   }
 </style>
@@ -507,7 +527,6 @@
         <span class="pct wants">Wants <span class="num" id="wants-pct">0</span>%</span>
         <span class="pct savings">Savings <span class="num" id="savings-pct">0</span>%</span>
       </div>
-      <div class="energy-box"><span class="bolt">&#9670;</span>Energy <span class="num"><span id="available-energy">0</span> / <span id="total-energy">7</span></span> available</div>
     </div>
     <div class="pie-wrap">
       <div id="pie-container"></div>
@@ -530,6 +549,15 @@
 
   <section>
     <h2>Expenses</h2>
+    <div class="energy-pool-row">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div class="energy-pool-cell">
+        <span class="energy-pool-label"><span class="num"><span id="available-energy">0</span> / <span id="total-energy">7</span></span> available</span>
+        <div class="diamonds energy-drop-target" id="energy-pool-diamonds" data-energy-target="pool"></div>
+      </div>
+    </div>
     <div class="ledger-head">
       <div>Expense</div>
       <div style="text-align:center">Monthly cost</div>
@@ -832,6 +860,8 @@ function render() {
 
   document.getElementById('total-energy').textContent = state.total_energy;
   document.getElementById('available-energy').textContent = availableEnergy();
+  const poolCapacity = state.total_energy - state.work_energy;
+  document.getElementById('energy-pool-diamonds').innerHTML = renderDiamonds(availableEnergy(), poolCapacity);
 
   document.getElementById('total-monthly').textContent = `-$${Math.abs(totalMonthly).toLocaleString()}`;
   document.getElementById('total-annual').textContent = `-$${Math.abs(totalAnnual).toLocaleString()}`;
@@ -889,7 +919,7 @@ function renderPie(needsPct, wantsPct, savingsPct, overBudget) {
 // being actively dragged skips having its .value overwritten (the browser
 // already reflects the live drag position); every other row's slider
 // — notably a groceries/dining inverse-linked partner — still updates live.
-const expenseRowRefs = new Map(); // key -> { row, costSlider, costValue, heartsCell, diamonds, energyDownBtn, energyUpBtn, notes }
+const expenseRowRefs = new Map(); // key -> { row, costSlider, costValue, heartsCell, diamonds, notes }
 
 function buildExpenseRow(exp) {
   const row = document.createElement('div');
@@ -910,10 +940,8 @@ function buildExpenseRow(exp) {
         min="0" max="${exp.levels.length - 1}" step="1" aria-label="${exp.name} monthly cost">
     </div>
     <div class="hearts-cell"></div>
-    <div class="stepper energy-cell">
-      <button data-action="energy-down" aria-label="Remove energy from ${exp.name}">&ominus;</button>
-      <div class="diamonds"></div>
-      <button data-action="energy-up" aria-label="Add energy to ${exp.name}">&oplus;</button>
+    <div class="energy-cell">
+      <div class="diamonds energy-drop-target" data-energy-target="${exp.key}"></div>
     </div>
   `;
 
@@ -924,10 +952,16 @@ function buildExpenseRow(exp) {
     costValue: row.querySelector('.value.cost'),
     heartsCell: row.querySelector('.hearts-cell'),
     diamonds: row.querySelector('.diamonds'),
-    energyDownBtn: row.querySelector('[data-action="energy-down"]'),
-    energyUpBtn: row.querySelector('[data-action="energy-up"]'),
     notes: row.querySelector('.notes'),
   };
+
+  // Dragging a filled (spent) diamond off this expense either returns that
+  // energy to the shared pool, or — if dropped directly on another
+  // expense's energy area — transfers it there in one motion.
+  refs.diamonds.addEventListener('pointerdown', (e) => {
+    if (!e.target.classList.contains('filled')) return;
+    startEnergyDrag(e, { type: 'expense', key: exp.key });
+  });
 
   // Native range inputs stop tracking the drag the moment the cursor leaves
   // their (often short) track, which reads as a broken/sticky slider. This
@@ -978,15 +1012,6 @@ function buildExpenseRow(exp) {
     changeLevel(exp, newLevelIndex - exp.levelIndex);
     render();
   });
-  refs.energyDownBtn.addEventListener('click', () => {
-    exp.energy--;
-    render();
-  });
-  refs.energyUpBtn.addEventListener('click', () => {
-    exp.energy++;
-    render();
-  });
-
   return refs;
 }
 
@@ -1008,8 +1033,6 @@ function updateExpenseRow(exp, refs, avail) {
   refs.heartsCell.className = 'hearts-cell ' + (hearts > 0 ? 'positive' : hearts < 0 ? 'negative' : '');
 
   refs.diamonds.innerHTML = renderDiamonds(exp.energy, mEnergy);
-  refs.energyDownBtn.disabled = exp.energy <= 0;
-  refs.energyUpBtn.disabled = !(exp.energy < mEnergy && avail > 0);
 
   refs.notes.textContent = exp.levels[exp.levelIndex].note;
 }
@@ -1041,6 +1064,90 @@ function renderDiamonds(energy, mEnergy) {
   return html;
 }
 
+// ---------- Energy drag-and-drop ----------
+// A filled diamond — in the shared pool (unspent) or on an expense row
+// (spent there) — can be picked up and dropped on any other
+// energy-drop-target: pool→expense spends a point there, expense→pool
+// refunds it, expense→expense moves it directly. Drop targets are found
+// via elementFromPoint rather than native HTML5 drag-and-drop, matching
+// the pointer-based approach already used for the cost sliders (more
+// reliable across browsers/touch, and lets us draw our own drag ghost).
+let energyDragGhost = null;
+let energyDragSource = null; // { type: 'pool' } | { type: 'expense', key }
+
+function moveEnergyGhost(x, y) {
+  if (!energyDragGhost) return;
+  energyDragGhost.style.left = x + 'px';
+  energyDragGhost.style.top = y + 'px';
+}
+
+function updateEnergyDropHighlight(x, y) {
+  document.querySelectorAll('.energy-drop-target.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const el = document.elementFromPoint(x, y);
+  const target = el && el.closest('.energy-drop-target');
+  if (target) target.classList.add('drag-over');
+}
+
+function applyEnergyDrop(source, targetKey) {
+  if (!source || !targetKey) return;
+
+  if (source.type === 'pool') {
+    if (targetKey === 'pool') return;
+    const exp = expenses.find(e => e.key === targetKey);
+    if (exp && exp.energy < maxEnergy(exp) && availableEnergy() > 0) {
+      exp.energy++;
+    }
+    return;
+  }
+
+  if (targetKey === source.key) return; // dropped back on itself
+  const fromExp = expenses.find(e => e.key === source.key);
+  if (!fromExp) return;
+
+  if (targetKey === 'pool') {
+    fromExp.energy--;
+    return;
+  }
+  const toExp = expenses.find(e => e.key === targetKey);
+  if (toExp && toExp.energy < maxEnergy(toExp)) {
+    fromExp.energy--;
+    toExp.energy++;
+  }
+}
+
+function onEnergyDragMove(e) {
+  moveEnergyGhost(e.clientX, e.clientY);
+  updateEnergyDropHighlight(e.clientX, e.clientY);
+}
+
+function onEnergyDragUp(e) {
+  document.removeEventListener('pointermove', onEnergyDragMove);
+  document.removeEventListener('pointerup', onEnergyDragUp);
+  document.querySelectorAll('.energy-drop-target.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const target = el && el.closest('.energy-drop-target');
+  applyEnergyDrop(energyDragSource, target ? target.dataset.energyTarget : null);
+
+  if (energyDragGhost) {
+    energyDragGhost.remove();
+    energyDragGhost = null;
+  }
+  energyDragSource = null;
+  render();
+}
+
+function startEnergyDrag(e, source) {
+  e.preventDefault();
+  energyDragSource = source;
+  energyDragGhost = document.createElement('div');
+  energyDragGhost.className = 'diamond filled drag-ghost';
+  document.body.appendChild(energyDragGhost);
+  moveEnergyGhost(e.clientX, e.clientY);
+  document.addEventListener('pointermove', onEnergyDragMove);
+  document.addEventListener('pointerup', onEnergyDragUp);
+}
+
 document.getElementById('pretax-income-input').addEventListener('input', (e) => {
   const value = Math.max(0, Math.round(Number(e.target.value)) || 0);
   state.annual_pretax_income = value;
@@ -1050,6 +1157,11 @@ document.getElementById('pretax-income-input').addEventListener('input', (e) => 
 document.getElementById('income-modifier-input').addEventListener('input', (e) => {
   state.income_modifier = Number(e.target.value) || 0;
   render();
+});
+
+document.getElementById('energy-pool-diamonds').addEventListener('pointerdown', (e) => {
+  if (!e.target.classList.contains('filled')) return;
+  startEnergyDrag(e, { type: 'pool' });
 });
 
 document.getElementById('new-jar-savings-input').addEventListener('input', (e) => {

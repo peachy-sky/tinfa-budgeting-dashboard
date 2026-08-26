@@ -61,8 +61,9 @@ Each expense has:
   min/max either way. Keyboard interaction (arrow keys, etc.) still goes
   through the native default action.
 - An **energy** ladder layered on the current cost tier: spending energy
-  (◆ diamonds, ⊖/⊕) further reduces that tier's cost, up to a per-expense max
-  (0–2), bounded by `available_energy`. When energy actually lowers the
+  (◆ diamonds) further reduces that tier's cost, up to a per-expense max
+  (0–2), bounded by `available_energy`. Energy is spent via drag-and-drop
+  (see below), not a stepper. When energy actually lowers the
   price (i.e. the current tier's energy-0 cost differs from its cost at
   the current energy spend), the pre-energy price is shown struck through
   next to the new price, which turns green (`--accent`). Spending energy
@@ -72,6 +73,28 @@ Each expense has:
   "modifier" callouts — modifiers are noted only, not mechanically applied),
   shown as a sub-line directly under the expense name (there is no separate
   Notes column).
+
+#### Energy spend: drag-and-drop
+The "X / Y available" counter and a shared pool of draggable ◆ diamonds
+(one per point of `total_energy - work_energy`, i.e. 4) sit directly above
+the Energy column header — moved there from the header area at the top of
+the page. There is no ⊖/⊕ stepper anywhere; energy is spent purely by
+dragging:
+- **Pool → expense**: drag a filled pool diamond onto any expense's
+  diamonds area to spend a point there (no-ops if that expense is already
+  at its own max energy, or the pool is empty).
+- **Expense → pool**: drag a filled diamond off an expense and drop it
+  back on the pool to refund that point.
+- **Expense → expense**: drag a filled diamond from one expense directly
+  onto another to move the point in one gesture (no-ops if the target is
+  already at its own max).
+- Dropping anywhere that isn't a valid target (off-screen, on itself,
+  etc.) cancels the drag with no change.
+
+Implemented as custom `pointerdown`/`pointermove`/`pointerup` handling
+with a floating drag-ghost diamond and `document.elementFromPoint` for
+drop-target detection (`optimalEnergyAllocation` / the "Reset to Lowest
+Costs" button still set `.energy` directly and are unaffected by this).
 
 Row DOM nodes are built once per expense and updated in place on every
 render rather than destroyed/recreated, so dragging a slider isn't
