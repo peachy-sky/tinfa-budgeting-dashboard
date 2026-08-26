@@ -99,9 +99,15 @@ There is no ⊖/⊕ stepper anywhere; energy is spent purely by dragging:
   (full column width × full row height, stretched via `align-self:
   stretch` + padding), not just the tight cluster of diamond icons —
   roughly a 30x larger hit area, so an imprecise drop anywhere in that
-  row's energy area still lands correctly. Picking a diamond *up* still
-  requires grabbing an actual filled diamond; only the drop side was
-  enlarged.
+  row's energy area still lands correctly.
+- The **grab** (pick-up) hit-area is also enlarged, separately from the
+  drop area: `findGrabbableDiamond` treats a click within a radius equal
+  to a diamond's own width (i.e. a grabbable field with double the
+  diamond's diameter — 100% bigger) as grabbing that diamond, picking the
+  nearest one if two diamonds' enlarged fields overlap. The pointerdown
+  listener is on the whole row (expense rows) / whole pool row, not just
+  the tight diamond cluster, so the enlarged radius has physical room to
+  register clicks that land in an adjacent cell.
 
 Implemented as custom `pointerdown`/`pointermove`/`pointerup` handling
 with a floating drag-ghost diamond and `document.elementFromPoint` for

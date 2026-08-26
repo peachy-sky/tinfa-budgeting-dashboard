@@ -986,9 +986,14 @@ function buildExpenseRow(exp) {
 
   // Dragging a filled (spent) diamond off this expense either returns that
   // energy to the shared pool, or — if dropped directly on another
-  // expense's energy area — transfers it there in one motion.
-  refs.diamonds.addEventListener('pointerdown', (e) => {
-    if (!e.target.classList.contains('filled')) return;
+  // expense's energy area — transfers it there in one motion. Listening
+  // on the whole (enlarged) energy-cell rather than just the tight
+  // diamonds cluster means findGrabbableDiamond's enlarged grab radius
+  // actually has room to register clicks near, not just on, a diamond —
+  // listening on the whole row (not just the energy cell) so the radius
+  // isn't clipped by a diamond sitting close to the cell's own edge.
+  row.addEventListener('pointerdown', (e) => {
+    if (!findGrabbableDiamond(refs.diamonds, e.clientX, e.clientY)) return;
     startEnergyDrag(e, { type: 'expense', key: exp.key });
   });
 
@@ -1177,6 +1182,29 @@ function startEnergyDrag(e, source) {
   document.addEventListener('pointerup', onEnergyDragUp);
 }
 
+// A precise "must click exactly on the 13-20px diamond" grab target is
+// fussy, especially on touch. This finds the nearest filled diamond within
+// a radius equal to the diamond's own width (i.e. a grabbable field twice
+// the diamond's diameter — 100% bigger than just the diamond itself),
+// picking the closest one if two diamonds' enlarged fields overlap.
+function findGrabbableDiamond(container, clientX, clientY) {
+  const diamonds = container.querySelectorAll('.diamond.filled');
+  let best = null;
+  let bestDist = Infinity;
+  diamonds.forEach((d) => {
+    const rect = d.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(clientX - cx, clientY - cy);
+    const radius = rect.width; // grabbable diameter = 2x the diamond's own width
+    if (dist <= radius && dist < bestDist) {
+      best = d;
+      bestDist = dist;
+    }
+  });
+  return best;
+}
+
 document.getElementById('pretax-income-input').addEventListener('input', (e) => {
   const value = Math.max(0, Math.round(Number(e.target.value)) || 0);
   state.annual_pretax_income = value;
@@ -1188,8 +1216,9 @@ document.getElementById('income-modifier-input').addEventListener('input', (e) =
   render();
 });
 
-document.getElementById('energy-pool-diamonds').addEventListener('pointerdown', (e) => {
-  if (!e.target.classList.contains('filled')) return;
+document.querySelector('.energy-pool-row').addEventListener('pointerdown', (e) => {
+  const diamonds = document.getElementById('energy-pool-diamonds');
+  if (!findGrabbableDiamond(diamonds, e.clientX, e.clientY)) return;
   startEnergyDrag(e, { type: 'pool' });
 });
 
