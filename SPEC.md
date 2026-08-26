@@ -38,6 +38,10 @@ not player-adjustable in this MVP.
 - Annual post-tax income = `annual_pretax_income - tax_amount +
   income_modifier`, live-computed, cascading into the needs/wants/savings
   percentages, the pie chart, and the over-budget alert.
+- Three static (non-draggable) filled ◆ diamonds sit next to the "Annual
+  pre-tax income" label, representing `work_energy` — the 3 energy always
+  spent earning that income. Purely decorative: no drag listener, and
+  never draws from or affects the draggable energy pool.
 
 ### 3. Expenses (the only player-editable section)
 Each expense has:

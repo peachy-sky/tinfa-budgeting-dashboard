@@ -451,6 +451,15 @@
   .diamond.filled:active { cursor: grabbing; }
   .diamond.filled:hover { transform: rotate(45deg) scale(1.15); }
   .diamond.disabled { opacity: 0.22; }
+  .diamond.static { cursor: default; touch-action: auto; }
+  .diamond.static:hover { transform: rotate(45deg); }
+
+  .work-diamonds {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
 
   .energy-drop-target {
     border-radius: 6px;
@@ -537,7 +546,17 @@
   <section>
     <h2>Income</h2>
     <table class="tax-table">
-      <tr><td>Annual pre-tax income</td><td class="amt num income-cell">$<input type="number" id="pretax-income-input" class="income-input" min="0" step="500" aria-label="Annual pre-tax income"></td></tr>
+      <tr>
+        <td>
+          Annual pre-tax income
+          <span class="diamonds work-diamonds" title="3 energy always spent earning this income" aria-label="3 energy always spent earning this income">
+            <div class="diamond filled static"></div>
+            <div class="diamond filled static"></div>
+            <div class="diamond filled static"></div>
+          </span>
+        </td>
+        <td class="amt num income-cell">$<input type="number" id="pretax-income-input" class="income-input" min="0" step="500" aria-label="Annual pre-tax income"></td>
+      </tr>
       <tr><td>Income tax (<span id="tax-rate">0</span>%)</td><td class="amt num">$<span id="tax-amount">0</span></td></tr>
       <tr>
         <td>Modifier</td>
