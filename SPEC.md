@@ -156,8 +156,8 @@ Sourced from `In-Game Budgeting - Level 1.csv`:
 | Expense | Category | Default cost | Cost tiers | Max energy |
 |---|---|---|---|---|
 | Rent + Utilities | NEED | -$200 | 5 (−200 … −2500) | 0 |
-| Groceries + Cooking @ Home | NEED | -$50 | 4 (−50 … −400) | 2 |
-| Dining Out | WANT | -$2,000 | 4 (−120 … −2000) | 1 (no discount on top tier) |
+| Groceries + Cooking @ Home | NEED | -$400 | 4 (−50 … −400) | 2 |
+| Dining Out | WANT | -$120 | 4 (−120 … −2000) | 1 (no discount on top tier) |
 | Healthcare | NEED | $0 | 4 ($0 … −300) | 1 |
 | Travel + Vacations + Experiences | WANT | -$300 | 3 (−100 … −1000) | 1 |
 | Transit + Car + Gas | NEED | -$300 | 4 (−100 … −700) | 0 |
