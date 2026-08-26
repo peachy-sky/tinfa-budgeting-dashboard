@@ -132,19 +132,22 @@ all five Year-1 expenses lock together on the very first Next Year click;
 each later-revealed expense then gets its own single year before locking
 in turn.
 
-A locked expense (`.expense-row.locked`):
+Locking only freezes the **cost tier** — energy stays fully movable on a
+locked expense, in both directions, for the rest of the game. A locked
+expense (`.expense-row.locked`):
 - Shows a 🔒 lock icon in place of the cost slider (`display:none` on the
   `<input type="range">`, matching `title`/`aria-label` on the icon) — the
-  frozen dollar value, hearts, and energy diamonds still display normally,
-  just non-interactively.
-- Loses the `energy-drop-target` class on its energy cell, so it can
-  neither be dragged from nor dropped onto — enforced both at the CSS/DOM
-  level and defensively inside `applyEnergyDrop` and `changeLevel` (which
-  also skips moving a locked inverse-link partner).
-- Is skipped entirely by "Reset to Lowest Costs": its tier is left alone,
-  and its already-spent energy is excluded from both the reallocation
-  pool and the redistributable budget (`state.total_energy -
-  state.work_energy - <energy already committed to locked expenses>`).
+  frozen dollar value and hearts still display normally.
+- Keeps the `energy-drop-target` class and remains a normal drag source/
+  target: energy can still be dragged onto it from the pool or another
+  expense, and dragged off it to the pool or another expense, exactly as
+  if it weren't locked. Only `changeLevel` (the cost tier) checks
+  `exp.locked` — the energy drag/drop path (`applyEnergyDrop`, the row's
+  grab listener) does not.
+- Is skipped by "Reset to Lowest Costs" *only* for its tier jump; the
+  energy-reallocation half of that button still includes every visible
+  expense (locked or not) against the full budget, same as before locking
+  existed.
 - Gets a subtly shaded row background (`--surface-2`) as a visual cue,
   independent of the lock icon.
 

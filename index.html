@@ -471,7 +471,6 @@
     filter: grayscale(1) opacity(0.7);
   }
   .expense-row.locked { background: var(--surface-2); }
-  .expense-row.locked .diamond { opacity: 0.55; }
   .expense-row.locked .cost-slider-cell { justify-content: flex-start; }
 
   .work-diamonds {
@@ -993,7 +992,6 @@ function buildExpenseRow(exp) {
     costOriginal: row.querySelector('.value.cost-original'),
     costValue: row.querySelector('.value.cost'),
     heartsCell: row.querySelector('.hearts-cell'),
-    energyCell: row.querySelector('.energy-cell'),
     diamonds: row.querySelector('.diamonds'),
     notes: row.querySelector('.notes'),
   };
@@ -1007,7 +1005,6 @@ function buildExpenseRow(exp) {
   // listening on the whole row (not just the energy cell) so the radius
   // isn't clipped by a diamond sitting close to the cell's own edge.
   row.addEventListener('pointerdown', (e) => {
-    if (exp.locked) return;
     if (!findGrabbableDiamond(refs.diamonds, e.clientX, e.clientY)) return;
     startEnergyDrag(e, { type: 'expense', key: exp.key });
   });
@@ -1078,7 +1075,6 @@ function updateExpenseRow(exp, refs, avail) {
   refs.lockIcon.style.display = exp.locked ? 'inline' : 'none';
   refs.costSlider.value = exp.levelIndex;
   refs.costSlider.max = exp.levels.length - 1;
-  refs.energyCell.classList.toggle('energy-drop-target', !exp.locked);
 
   const baselineCost = exp.levels[exp.levelIndex].costs[0];
   const isDiscounted = exp.energy > 0 && baselineCost !== cost;
@@ -1151,7 +1147,7 @@ function applyEnergyDrop(source, targetKey) {
   if (source.type === 'pool') {
     if (targetKey === 'pool') return;
     const exp = expenses.find(e => e.key === targetKey);
-    if (exp && !exp.locked && exp.energy < maxEnergy(exp) && availableEnergy() > 0) {
+    if (exp && exp.energy < maxEnergy(exp) && availableEnergy() > 0) {
       exp.energy++;
     }
     return;
@@ -1159,14 +1155,14 @@ function applyEnergyDrop(source, targetKey) {
 
   if (targetKey === source.key) return; // dropped back on itself
   const fromExp = expenses.find(e => e.key === source.key);
-  if (!fromExp || fromExp.locked) return;
+  if (!fromExp) return;
 
   if (targetKey === 'pool') {
     fromExp.energy--;
     return;
   }
   const toExp = expenses.find(e => e.key === targetKey);
-  if (toExp && !toExp.locked && toExp.energy < maxEnergy(toExp)) {
+  if (toExp && toExp.energy < maxEnergy(toExp)) {
     fromExp.energy--;
     toExp.energy++;
   }
@@ -1320,11 +1316,12 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
   setLevel('pet', 0);
   ['rent', 'transit', 'shopping', 'education'].forEach(key => setLevel(key, 0));
 
-  const allocatable = visibleExpenses().filter(e => !e.locked);
-  const lockedEnergyUsed = visibleExpenses().filter(e => e.locked).reduce((sum, e) => sum + e.energy, 0);
-  const budget = state.total_energy - state.work_energy - lockedEnergyUsed;
-  const alloc = optimalEnergyAllocation(allocatable, budget);
-  allocatable.forEach(exp => {
+  // Energy stays fully reallocatable regardless of lock — only the cost
+  // tier freezes — so this considers every visible expense with the full
+  // budget, same as before locking existed.
+  const budget = state.total_energy - state.work_energy;
+  const alloc = optimalEnergyAllocation(visibleExpenses(), budget);
+  visibleExpenses().forEach(exp => {
     exp.energy = alloc[exp.key] || 0;
   });
 
