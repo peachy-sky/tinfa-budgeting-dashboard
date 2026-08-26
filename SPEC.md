@@ -118,6 +118,36 @@ Row DOM nodes are built once per expense and updated in place on every
 render rather than destroyed/recreated, so dragging a slider isn't
 interrupted mid-gesture.
 
+#### Locking: one year of editability, then frozen forever
+Each expense tracks `revealedYear` (the year it first became visible —
+1 for Groceries/Dining/Healthcare/Travel/Pet, since they're visible from
+the start; whatever `state.year` was when a pending expense got revealed,
+for Rent/Transit/Shopping/Education) and a `locked` flag (starts `false`).
+
+On every Next Year click, **before** `year` increments, any expense with
+`!locked && revealedYear === state.year` gets `locked = true` — i.e. an
+expense is editable for exactly the one year it's shown in, then freezes
+for the rest of the game at whatever cost tier/energy it had. This means
+all five Year-1 expenses lock together on the very first Next Year click;
+each later-revealed expense then gets its own single year before locking
+in turn.
+
+A locked expense (`.expense-row.locked`):
+- Shows a 🔒 lock icon in place of the cost slider (`display:none` on the
+  `<input type="range">`, matching `title`/`aria-label` on the icon) — the
+  frozen dollar value, hearts, and energy diamonds still display normally,
+  just non-interactively.
+- Loses the `energy-drop-target` class on its energy cell, so it can
+  neither be dragged from nor dropped onto — enforced both at the CSS/DOM
+  level and defensively inside `applyEnergyDrop` and `changeLevel` (which
+  also skips moving a locked inverse-link partner).
+- Is skipped entirely by "Reset to Lowest Costs": its tier is left alone,
+  and its already-spent energy is excluded from both the reallocation
+  pool and the redistributable budget (`state.total_energy -
+  state.work_energy - <energy already committed to locked expenses>`).
+- Gets a subtly shaded row background (`--surface-2`) as a visual cue,
+  independent of the lock icon.
+
 Sourced from `In-Game Budgeting - Level 1.csv`:
 
 | Expense | Category | Default cost | Cost tiers | Max energy |

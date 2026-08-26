@@ -464,6 +464,16 @@
   .diamond.static { cursor: default; touch-action: auto; }
   .diamond.static:hover { transform: rotate(45deg); }
 
+  .lock-icon {
+    display: none;
+    font-size: 1rem;
+    line-height: 1;
+    filter: grayscale(1) opacity(0.7);
+  }
+  .expense-row.locked { background: var(--surface-2); }
+  .expense-row.locked .diamond { opacity: 0.55; }
+  .expense-row.locked .cost-slider-cell { justify-content: flex-start; }
+
   .work-diamonds {
     display: inline-flex;
     gap: 3px;
@@ -660,7 +670,7 @@ const state = {
 const expenses = [
   {
     key: 'rent', name: 'Rent + Utilities', category: 'NEED',
-    levelIndex: 0, energy: 0, hidden: true,
+    levelIndex: 0, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-200], hearts: -0.25, note: 'living at home...' },
       { costs: [-1000], hearts: -0.5, note: 'bad apartment...' },
@@ -671,7 +681,7 @@ const expenses = [
   },
   {
     key: 'groceries', name: 'Groceries + Cooking @ Home', category: 'NEED',
-    levelIndex: 0, energy: 0, inverseLink: 'dining',
+    levelIndex: 0, energy: 0, inverseLink: 'dining', locked: false, revealedYear: 1,
     levels: [
       { costs: [-50, -50, -50], hearts: 0, note: 'paying my fair share of groceries!' },
       { costs: [-150, -100, -50], hearts: 0, note: 'paying my fair share of groceries!' },
@@ -681,7 +691,7 @@ const expenses = [
   },
   {
     key: 'dining', name: 'Dining Out', category: 'WANT',
-    levelIndex: 3, energy: 0, inverseLink: 'groceries',
+    levelIndex: 3, energy: 0, inverseLink: 'groceries', locked: false, revealedYear: 1,
     levels: [
       { costs: [-120, -100], hearts: 0, note: 'dining out 1x a week' },
       { costs: [-300, -200], hearts: 0, note: 'dining out 2.5x a week' },
@@ -691,7 +701,7 @@ const expenses = [
   },
   {
     key: 'healthcare', name: 'Healthcare', category: 'NEED',
-    levelIndex: 0, energy: 0, energyHeartsBonus: 0.25,
+    levelIndex: 0, energy: 0, energyHeartsBonus: 0.25, locked: false, revealedYear: 1,
     levels: [
       { costs: [0, 0], hearts: 0, note: "on parents' healthcare til 26! / working out feels good!" },
       { costs: [-150, -100], hearts: 0, note: '2x modifier on healthcare costs... / working out feels good!' },
@@ -701,7 +711,7 @@ const expenses = [
   },
   {
     key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT',
-    levelIndex: 1, energy: 0,
+    levelIndex: 1, energy: 0, locked: false, revealedYear: 1,
     levels: [
       { costs: [-100, -50], hearts: 0, note: '' },
       { costs: [-300, -200], hearts: 0.25, note: '' },
@@ -710,7 +720,7 @@ const expenses = [
   },
   {
     key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
-    levelIndex: 1, energy: 0, hidden: true,
+    levelIndex: 1, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-100], hearts: -0.5, note: 'no car, just bussin~' },
       { costs: [-300], hearts: 0, note: 'cheap car, 2x mod on maintenance :(' },
@@ -720,7 +730,7 @@ const expenses = [
   },
   {
     key: 'shopping', name: 'Shopping', category: 'WANT',
-    levelIndex: 2, energy: 0, hidden: true,
+    levelIndex: 2, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-200, -100], hearts: 0, note: 'still gotta buy SOME things, like toiletries...' },
       { costs: [-450, -300], hearts: 0, note: '' },
@@ -730,7 +740,7 @@ const expenses = [
   },
   {
     key: 'education', name: 'Education (Trade School)', category: 'NEED',
-    levelIndex: 1, energy: 0, hidden: true,
+    levelIndex: 1, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-250, -200], hearts: 0, note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
       { costs: [-400, -300], hearts: 0, note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
@@ -738,7 +748,7 @@ const expenses = [
   },
   {
     key: 'pet', name: 'Pet', category: 'WANT',
-    levelIndex: 0, energy: 0,
+    levelIndex: 0, energy: 0, locked: false, revealedYear: 1,
     levels: [
       { costs: [0], hearts: 0, note: 'food, toys, apt pet fee (no cat) — modifiers: rescued from shelter -$125, purchased from breeder -$83 [not implemented]' },
     ],
@@ -839,12 +849,13 @@ function optimalEnergyAllocation(expList, budget) {
 // home (raising groceries' tier) means eating out less (lowering dining's
 // tier), and vice versa.
 function changeLevel(exp, delta) {
+  if (exp.locked) return;
   exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, exp.levelIndex + delta));
   exp.energy = Math.min(exp.energy, maxEnergy(exp));
 
   if (exp.inverseLink) {
     const linked = expenses.find(e => e.key === exp.inverseLink);
-    if (linked) {
+    if (linked && !linked.locked) {
       linked.levelIndex = Math.max(0, Math.min(linked.levels.length - 1, linked.levelIndex - delta));
       linked.energy = Math.min(linked.energy, maxEnergy(linked));
     }
@@ -967,6 +978,7 @@ function buildExpenseRow(exp) {
       </div>
       <input type="range" class="cost-slider" style="--track-width: ${trackWidth}px"
         min="0" max="${exp.levels.length - 1}" step="1" aria-label="${exp.name} monthly cost">
+      <span class="lock-icon" title="Locked — no longer editable" aria-label="Locked — no longer editable">&#128274;</span>
     </div>
     <div class="hearts-cell"></div>
     <div class="energy-cell energy-drop-target" data-energy-target="${exp.key}">
@@ -977,9 +989,11 @@ function buildExpenseRow(exp) {
   const refs = {
     row,
     costSlider: row.querySelector('.cost-slider'),
+    lockIcon: row.querySelector('.lock-icon'),
     costOriginal: row.querySelector('.value.cost-original'),
     costValue: row.querySelector('.value.cost'),
     heartsCell: row.querySelector('.hearts-cell'),
+    energyCell: row.querySelector('.energy-cell'),
     diamonds: row.querySelector('.diamonds'),
     notes: row.querySelector('.notes'),
   };
@@ -993,6 +1007,7 @@ function buildExpenseRow(exp) {
   // listening on the whole row (not just the energy cell) so the radius
   // isn't clipped by a diamond sitting close to the cell's own edge.
   row.addEventListener('pointerdown', (e) => {
+    if (exp.locked) return;
     if (!findGrabbableDiamond(refs.diamonds, e.clientX, e.clientY)) return;
     startEnergyDrag(e, { type: 'expense', key: exp.key });
   });
@@ -1054,8 +1069,16 @@ function updateExpenseRow(exp, refs, avail) {
   const mEnergy = maxEnergy(exp);
   const hearts = currentHearts(exp);
 
+  refs.row.classList.toggle('locked', exp.locked);
+
+  // Locked expenses lose the interactive slider entirely (replaced with a
+  // lock icon) and their energy cell stops being a valid drag source/
+  // drop target, but the frozen cost/hearts/energy values still display.
+  refs.costSlider.style.display = exp.locked ? 'none' : '';
+  refs.lockIcon.style.display = exp.locked ? 'inline' : 'none';
   refs.costSlider.value = exp.levelIndex;
   refs.costSlider.max = exp.levels.length - 1;
+  refs.energyCell.classList.toggle('energy-drop-target', !exp.locked);
 
   const baselineCost = exp.levels[exp.levelIndex].costs[0];
   const isDiscounted = exp.energy > 0 && baselineCost !== cost;
@@ -1128,7 +1151,7 @@ function applyEnergyDrop(source, targetKey) {
   if (source.type === 'pool') {
     if (targetKey === 'pool') return;
     const exp = expenses.find(e => e.key === targetKey);
-    if (exp && exp.energy < maxEnergy(exp) && availableEnergy() > 0) {
+    if (exp && !exp.locked && exp.energy < maxEnergy(exp) && availableEnergy() > 0) {
       exp.energy++;
     }
     return;
@@ -1136,14 +1159,14 @@ function applyEnergyDrop(source, targetKey) {
 
   if (targetKey === source.key) return; // dropped back on itself
   const fromExp = expenses.find(e => e.key === source.key);
-  if (!fromExp) return;
+  if (!fromExp || fromExp.locked) return;
 
   if (targetKey === 'pool') {
     fromExp.energy--;
     return;
   }
   const toExp = expenses.find(e => e.key === targetKey);
-  if (toExp && toExp.energy < maxEnergy(toExp)) {
+  if (toExp && !toExp.locked && toExp.energy < maxEnergy(toExp)) {
     fromExp.energy--;
     toExp.energy++;
   }
@@ -1244,6 +1267,16 @@ document.getElementById('hearts-modifier-input').addEventListener('input', (e) =
 document.getElementById('next-year-btn').addEventListener('click', () => {
   state.current_jar_savings += state.new_jar_savings + earnedInterest();
   state.hearts_last_year += heartsThisYear() + state.hearts_modifier;
+
+  // Any expense whose first year of being visible is the year that's
+  // ending now gets locked forever — its cost tier and energy freeze at
+  // whatever they currently are.
+  expenses.forEach((exp) => {
+    if (!exp.locked && exp.revealedYear === state.year) {
+      exp.locked = true;
+    }
+  });
+
   state.year += 1;
   state.new_jar_savings = 0;
   state.income_modifier = 0;
@@ -1252,7 +1285,10 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
   const nextKey = pendingExpenses.shift();
   if (nextKey) {
     const exp = expenses.find(e => e.key === nextKey);
-    if (exp) exp.hidden = false;
+    if (exp) {
+      exp.hidden = false;
+      exp.revealedYear = state.year;
+    }
   }
 
   render();
@@ -1267,9 +1303,12 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
 // spends the full available energy budget wherever it saves the most
 // money overall (not just greedily per-expense).
 document.getElementById('set-lowest-btn').addEventListener('click', () => {
+  // Locked expenses are frozen — skipped entirely, both for the hard-coded
+  // tier jumps and for the energy reallocation below (their already-spent
+  // energy stays put and isn't available to redistribute).
   function setLevel(key, levelIndex) {
     const exp = expenses.find(e => e.key === key);
-    if (!exp) return;
+    if (!exp || exp.locked) return;
     exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, levelIndex));
   }
 
@@ -1281,9 +1320,11 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
   setLevel('pet', 0);
   ['rent', 'transit', 'shopping', 'education'].forEach(key => setLevel(key, 0));
 
-  const budget = state.total_energy - state.work_energy;
-  const alloc = optimalEnergyAllocation(visibleExpenses(), budget);
-  visibleExpenses().forEach(exp => {
+  const allocatable = visibleExpenses().filter(e => !e.locked);
+  const lockedEnergyUsed = visibleExpenses().filter(e => e.locked).reduce((sum, e) => sum + e.energy, 0);
+  const budget = state.total_energy - state.work_energy - lockedEnergyUsed;
+  const alloc = optimalEnergyAllocation(allocatable, budget);
+  allocatable.forEach(exp => {
     exp.energy = alloc[exp.key] || 0;
   });
 
