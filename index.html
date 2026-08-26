@@ -294,16 +294,21 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 6px;
+    background: var(--gold-soft);
+    border: 1.5px solid var(--gold);
+    border-radius: 12px;
+    padding: 8px 12px;
   }
   .energy-pool-label {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--ink-muted);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
   }
-  .energy-pool-label .num { color: var(--ink); }
-  .energy-pool-cell .diamonds { justify-content: flex-end; }
+  .energy-pool-label .num { color: var(--ink); font-size: 1.15rem; }
+  .energy-pool-cell .diamonds { justify-content: flex-end; gap: 6px; }
+  .energy-pool-cell .diamond { width: 20px; height: 20px; border-width: 2px; }
 
   .ledger-head {
     display: grid;
@@ -364,7 +369,12 @@
   .hearts-cell.positive { color: var(--accent); }
   .hearts-cell.negative { color: var(--danger); }
 
-  .energy-cell { display: flex; align-items: center; }
+  .energy-cell {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 8px 4px;
+  }
 
   .cost-slider-cell {
     display: flex;
@@ -959,8 +969,8 @@ function buildExpenseRow(exp) {
         min="0" max="${exp.levels.length - 1}" step="1" aria-label="${exp.name} monthly cost">
     </div>
     <div class="hearts-cell"></div>
-    <div class="energy-cell">
-      <div class="diamonds energy-drop-target" data-energy-target="${exp.key}"></div>
+    <div class="energy-cell energy-drop-target" data-energy-target="${exp.key}">
+      <div class="diamonds"></div>
     </div>
   `;
 

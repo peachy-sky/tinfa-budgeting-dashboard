@@ -82,10 +82,11 @@ Each expense has:
 The "X / Y available" counter and a shared pool of draggable ◆ diamonds
 (one per point of `total_energy - work_energy`, i.e. 4) sit directly above
 the Energy column header — moved there from the header area at the top of
-the page. There is no ⊖/⊕ stepper anywhere; energy is spent purely by
-dragging:
+the page. It's styled as a filled gold badge (larger bold text, larger
+diamonds) so it reads clearly rather than blending into the ledger.
+There is no ⊖/⊕ stepper anywhere; energy is spent purely by dragging:
 - **Pool → expense**: drag a filled pool diamond onto any expense's
-  diamonds area to spend a point there (no-ops if that expense is already
+  energy area to spend a point there (no-ops if that expense is already
   at its own max energy, or the pool is empty).
 - **Expense → pool**: drag a filled diamond off an expense and drop it
   back on the pool to refund that point.
@@ -94,6 +95,13 @@ dragging:
   already at its own max).
 - Dropping anywhere that isn't a valid target (off-screen, on itself,
   etc.) cancels the drag with no change.
+- The **drop target** for each expense is its entire Energy column cell
+  (full column width × full row height, stretched via `align-self:
+  stretch` + padding), not just the tight cluster of diamond icons —
+  roughly a 30x larger hit area, so an imprecise drop anywhere in that
+  row's energy area still lands correctly. Picking a diamond *up* still
+  requires grabbing an actual filled diamond; only the drop side was
+  enlarged.
 
 Implemented as custom `pointerdown`/`pointermove`/`pointerup` handling
 with a floating drag-ghost diamond and `document.elementFromPoint` for
