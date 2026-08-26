@@ -1076,6 +1076,8 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
   state.hearts_last_year += heartsThisYear() + state.hearts_modifier;
   state.year += 1;
   state.new_jar_savings = 0;
+  state.income_modifier = 0;
+  state.hearts_modifier = 0;
 
   const nextKey = pendingExpenses.shift();
   if (nextKey) {
@@ -1085,6 +1087,8 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
 
   render();
   document.getElementById('new-jar-savings-input').value = '';
+  document.getElementById('income-modifier-input').value = '';
+  document.getElementById('hearts-modifier-input').value = '';
 });
 
 // Jumps specific expenses to hard-coded tiers: Groceries to its priciest

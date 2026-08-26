@@ -168,13 +168,15 @@ colored green/red).
 - Clicking Next Year:
   - `current_jar_savings += new_jar_savings + earned_interest`
   - `hearts_last_year += hearts_this_year + hearts_modifier` (computed
-    against this year's visible expenses, before that year's pending
-    expense reveal below takes effect); `hearts_modifier` is left as-is.
+    against this year's visible expenses and modifier, before either the
+    modifier reset or that year's pending expense reveal below take
+    effect).
   - `year += 1`
-  - `new_jar_savings` resets to 0 and its input is cleared to empty (ready
-    for next year's contribution); `jar_interest_rate` is left as-is.
-  - Does **not** touch income, tax, or any expense tier/energy state —
-    expenses and income are edited only through their own sections.
+  - `new_jar_savings`, `income_modifier`, and `hearts_modifier` all reset
+    to 0, with their inputs cleared to empty (ready for next year's
+    values); `jar_interest_rate` is left as-is.
+  - Does **not** touch `annual_pretax_income`, tax, or any expense tier/
+    energy state — those are edited only through their own sections.
 
 ## Typography
 Headings (`h1`, `h2`, and the over-budget "!" mark) use the hand-lettered
