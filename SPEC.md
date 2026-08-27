@@ -8,7 +8,8 @@ step.
 
 | Variable | Start value | Notes |
 |---|---|---|
-| `annual_pretax_income` | 15000 | player-editable via a number input |
+| `level` | 1 | which expense set is loaded; see **Levels** below |
+| `annual_pretax_income` | 15000 | player-editable via a number input; same default on every level |
 | `income_tax` (rate) | 0% | hard-coded, drives `tax_amount` |
 | `annual_posttax_income` | 15000 | = pretax − tax |
 | `total_energy` | 7 | total energy pool |
@@ -21,6 +22,51 @@ step.
 
 Work (income) consumes a fixed 3 energy baked into the $15,000 figure and is
 not player-adjustable in this MVP.
+
+## Levels
+A `<select id="level-select">` next to the "Budget Sheet" eyebrow (top-left
+of the page) switches between **Level 0** and **Level 1** — two entirely
+separate expense sets sharing one system:
+
+- `EXPENSE_TEMPLATES` (`{ 1: EXPENSE_TEMPLATES_L1, 0: EXPENSE_TEMPLATES_L0 }`)
+  and `PENDING_TEMPLATES` (`{ 1: [...4 keys...], 0: [] }`) are the
+  read-only, per-level *source data* — never mutated directly.
+- `expenses` and `pendingExpenses` are `let`-declared live copies:
+  `loadLevel(levelNum)` deep-clones (`structuredClone`) that level's
+  templates into them. Every other function in the file (render,
+  changeLevel, applyEnergyDrop, the reset button, etc.) reads these two
+  by name, so reassigning them on a level switch is automatically picked
+  up everywhere with no re-wiring.
+- `DEFAULT_STATE` holds every state field's shared starting value
+  (income, tax, energy, jar, hearts — the "structure of the systems" that
+  doesn't change between levels, since Level 0's CSV has no income/tax
+  rows of its own). `state = { ...DEFAULT_STATE, level: 1 }` at load, and
+  `loadLevel()` does `Object.assign(state, DEFAULT_STATE); state.level =
+  levelNum;` — i.e. switching levels is a **full reset**: year, jar
+  savings, hearts, income modifier, everything goes back to its default,
+  not just the expense list.
+- `loadLevel()` also clears `expenseRowRefs` and `#expense-list`'s
+  innerHTML before re-rendering, since the previous level's expense-row
+  DOM nodes are keyed by expense keys that may not even exist in the new
+  level (Level 0 has no `rent`/`groceries`/etc. at all).
+- Each template expense carries a `resetTarget` (`'min'` or `'max'`) that
+  the "Reset to Lowest Costs" button reads generically — see below —
+  instead of a hard-coded list of expense keys, so the button works
+  correctly regardless of which level is loaded.
+- `sliderWidthPx`'s reference max (previously a load-time constant) is
+  now computed fresh from the *current* `expenses` array on every call,
+  so Level 0's much smaller dollar amounts (max $30) scale their own
+  sliders correctly instead of inheriting Level 1's $2,500 reference.
+
+Level 0 is a much smaller-scale sheet — sourced from
+`In-Game Budgeting L0.csv` — with only two WANT categories and no NEED
+expenses, no hidden/yearly-reveal expenses (`PENDING_TEMPLATES[0]` is
+empty), and no Groceries/Dining-style inverse link:
+
+| Expense | Category | Default cost | Cost tiers | Max energy |
+|---|---|---|---|---|
+| Travel + Vacations + Experiences | WANT | $0 | 3 ($0 … −30) | 0 |
+| Shopping | WANT | $0 | 2 ($0 … −20) | 1 |
 
 ## Sections
 
@@ -185,14 +231,14 @@ energy.
 
 #### "Reset to Lowest Costs" button
 Bottom-left of the Expenses block. Two steps, both bypassing the normal
-slider/inverse-link interaction entirely:
-1. Jumps hard-coded expenses to hard-coded tiers — Groceries + Cooking @
-   Home → its **priciest** tier (the only expense set to its max, not its
-   min); Dining Out, Healthcare, Travel + Vacations + Experiences, Pet, and
-   any other currently-revealed expense (Rent, Transit, Shopping,
-   Education) → each expense's **cheapest** tier.
+slider/inverse-link interaction entirely, and both data-driven off the
+current level's `expenses` rather than any hard-coded key list:
+1. Every unlocked expense jumps to its own `resetTarget` tier — `'max'`
+   (priciest) for Level 1's Groceries + Cooking @ Home, its half of the
+   cook-more/eat-out-less pair; `'min'` (cheapest) for every other
+   expense on every level.
 2. With those tiers now fixed, spends the player's full available energy
-   budget (`total_energy - work_energy`) across the revealed expenses
+   budget (`total_energy - work_energy`) across the visible expenses
    however saves the most total money — solved as a multiple-choice
    knapsack (`optimalEnergyAllocation`, a small memoized recursion) rather
    than greedily per-expense, so it correctly finds the globally best

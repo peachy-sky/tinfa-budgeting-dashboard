@@ -139,6 +139,29 @@
     text-transform: uppercase;
     color: var(--ink-muted);
   }
+  .eyebrow-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .level-select-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  #level-select {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1.5px solid var(--rule);
+    border-radius: 6px;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+  #level-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .summary-line {
     margin-top: 14px;
@@ -545,7 +568,16 @@
 <div class="sheet">
   <div class="masthead">
     <div>
-      <div class="eyebrow">Level 1 · Budget Sheet</div>
+      <div class="eyebrow-row">
+        <div class="eyebrow">Budget Sheet</div>
+        <label class="level-select-wrap">
+          <span class="level-select-label">Level</span>
+          <select id="level-select" aria-label="Select level">
+            <option value="0">0</option>
+            <option value="1" selected>1</option>
+          </select>
+        </label>
+      </div>
       <h1>Income + Budgeting</h1>
       <div class="summary-line">
         Post-tax income: <span class="num">$<span id="posttax-income-label">0</span>/yr</span> (100%)
@@ -651,7 +683,10 @@
 
 <script>
 // ---------- State ----------
-const state = {
+// Values here are the shared "structure of the systems" defaults every
+// level starts from — loadLevel() resets to exactly this shape (plus
+// state.level itself) whenever the player switches levels.
+const DEFAULT_STATE = {
   annual_pretax_income: 15000,
   income_tax_rate: 0, // %
   income_modifier: 0,
@@ -664,11 +699,15 @@ const state = {
   hearts_last_year: 5,
   hearts_modifier: 0,
 };
+const state = { ...DEFAULT_STATE, level: 1 };
 
-// Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...)
-const expenses = [
+// Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...).
+// `resetTarget`: which tier "Reset to Lowest Costs" jumps this expense to
+// — 'min' (cheapest, the default for everything) or 'max' (priciest,
+// only Level 1's Groceries, its half of the cook-more/eat-out-less pair).
+const EXPENSE_TEMPLATES_L1 = [
   {
-    key: 'rent', name: 'Rent + Utilities', category: 'NEED',
+    key: 'rent', name: 'Rent + Utilities', category: 'NEED', resetTarget: 'min',
     levelIndex: 0, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-200], hearts: -0.25, note: 'living at home...' },
@@ -679,7 +718,7 @@ const expenses = [
     ],
   },
   {
-    key: 'groceries', name: 'Groceries + Cooking @ Home', category: 'NEED',
+    key: 'groceries', name: 'Groceries + Cooking @ Home', category: 'NEED', resetTarget: 'max',
     levelIndex: 3, energy: 0, inverseLink: 'dining', locked: false, revealedYear: 1,
     levels: [
       { costs: [-50, -50, -50], hearts: 0, note: 'paying my fair share of groceries!' },
@@ -689,7 +728,7 @@ const expenses = [
     ],
   },
   {
-    key: 'dining', name: 'Dining Out', category: 'WANT',
+    key: 'dining', name: 'Dining Out', category: 'WANT', resetTarget: 'min',
     levelIndex: 0, energy: 0, inverseLink: 'groceries', locked: false, revealedYear: 1,
     levels: [
       { costs: [-120, -100], hearts: 0, note: 'dining out 1x a week' },
@@ -699,7 +738,7 @@ const expenses = [
     ],
   },
   {
-    key: 'healthcare', name: 'Healthcare', category: 'NEED',
+    key: 'healthcare', name: 'Healthcare', category: 'NEED', resetTarget: 'min',
     levelIndex: 0, energy: 0, energyHeartsBonus: 0.25, locked: false, revealedYear: 1,
     levels: [
       { costs: [0, 0], hearts: 0, note: "on parents' healthcare til 26! / working out feels good!" },
@@ -709,7 +748,7 @@ const expenses = [
     ],
   },
   {
-    key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT',
+    key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT', resetTarget: 'min',
     levelIndex: 1, energy: 0, locked: false, revealedYear: 1,
     levels: [
       { costs: [-100, -50], hearts: 0, note: '' },
@@ -718,7 +757,7 @@ const expenses = [
     ],
   },
   {
-    key: 'transit', name: 'Transit + Car + Gas', category: 'NEED',
+    key: 'transit', name: 'Transit + Car + Gas', category: 'NEED', resetTarget: 'min',
     levelIndex: 1, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-100], hearts: -0.5, note: 'no car, just bussin~' },
@@ -728,7 +767,7 @@ const expenses = [
     ],
   },
   {
-    key: 'shopping', name: 'Shopping', category: 'WANT',
+    key: 'shopping', name: 'Shopping', category: 'WANT', resetTarget: 'min',
     levelIndex: 2, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-200, -100], hearts: 0, note: 'still gotta buy SOME things, like toiletries...' },
@@ -738,7 +777,7 @@ const expenses = [
     ],
   },
   {
-    key: 'education', name: 'Education (Trade School)', category: 'NEED',
+    key: 'education', name: 'Education (Trade School)', category: 'NEED', resetTarget: 'min',
     levelIndex: 1, energy: 0, hidden: true, locked: false, revealedYear: null,
     levels: [
       { costs: [-250, -200], hearts: 0, note: 'spend energy to graduate faster! finish in 2 years instead of 3' },
@@ -746,7 +785,7 @@ const expenses = [
     ],
   },
   {
-    key: 'pet', name: 'Pet', category: 'WANT',
+    key: 'pet', name: 'Pet', category: 'WANT', resetTarget: 'min',
     levelIndex: 0, energy: 0, locked: false, revealedYear: 1,
     levels: [
       { costs: [0], hearts: 0, note: 'food, toys, apt pet fee (no cat) — modifiers: rescued from shelter -$125, purchased from breeder -$83 [not implemented]' },
@@ -754,9 +793,45 @@ const expenses = [
   },
 ];
 
-// Expenses added back one per year (in this order) via the Next Year button,
-// starting fully removed from the sheet.
-const pendingExpenses = ['rent', 'transit', 'shopping', 'education'];
+// Sourced from "In-Game Budgeting L0.csv" — a much smaller-scale sheet
+// (two WANT categories, no income/tax rows of its own, so Level 0 keeps
+// the same income/tax/energy/hearts/jar defaults as Level 1's structure).
+const EXPENSE_TEMPLATES_L0 = [
+  {
+    key: 'travel', name: 'Travel + Vacations + Experiences', category: 'WANT', resetTarget: 'min',
+    levelIndex: 0, energy: 0, locked: false, revealedYear: 1,
+    levels: [
+      { costs: [0], hearts: 0, note: '' },
+      { costs: [-10], hearts: 0.25, note: 'swag for me at the gift shops' },
+      { costs: [-30], hearts: 1, note: 'getting gifts for family and friends!' },
+    ],
+  },
+  {
+    key: 'shopping', name: 'Shopping', category: 'WANT', resetTarget: 'min',
+    levelIndex: 0, energy: 0, locked: false, revealedYear: 1,
+    levels: [
+      { costs: [0, 0], hearts: 0, note: '' },
+      { costs: [-20, -10], hearts: 0.25, note: 'a small toy or snacks' },
+    ],
+  },
+];
+
+const EXPENSE_TEMPLATES = { 1: EXPENSE_TEMPLATES_L1, 0: EXPENSE_TEMPLATES_L0 };
+
+// Expenses added back one per year (in this order) via the Next Year
+// button, starting fully removed from the sheet. Level 0 has nothing
+// pending — both its expenses are visible from year 1.
+const PENDING_TEMPLATES = {
+  1: ['rent', 'transit', 'shopping', 'education'],
+  0: [],
+};
+
+// The live, mutable per-run copies — reassigned wholesale by loadLevel()
+// on every level switch. Everything else in this file reads these two
+// variables by name (not a captured snapshot), so a reassignment here is
+// automatically picked up everywhere without re-wiring any listeners.
+let expenses = [];
+let pendingExpenses = [];
 
 // ---------- Derived getters ----------
 function currentCost(exp) {
@@ -778,9 +853,12 @@ const SLIDER_MAX_PX = 420;
 function expenseMaxCostAbs(exp) {
   return Math.max(...exp.levels.map(l => Math.abs(l.costs[0])));
 }
-const GLOBAL_MAX_COST_ABS = Math.max(...expenses.map(expenseMaxCostAbs));
 function sliderWidthPx(exp) {
-  const ratio = GLOBAL_MAX_COST_ABS ? expenseMaxCostAbs(exp) / GLOBAL_MAX_COST_ABS : 0;
+  // Recomputed against the *current* level's expenses (not cached at load
+  // time), so Level 0's much smaller dollar amounts scale their own
+  // sliders correctly instead of inheriting Level 1's much larger max.
+  const globalMax = Math.max(...expenses.map(expenseMaxCostAbs));
+  const ratio = globalMax ? expenseMaxCostAbs(exp) / globalMax : 0;
   return Math.round(SLIDER_MIN_PX + ratio * (SLIDER_MAX_PX - SLIDER_MIN_PX));
 }
 function energySpentOnExpenses() {
@@ -878,6 +956,8 @@ function render() {
   const needsPct = posttax ? Math.abs(annualNeeds) / posttax * 100 : 0;
   const wantsPct = posttax ? Math.abs(annualWants) / posttax * 100 : 0;
   const savingsPct = posttax ? annualSavings / posttax * 100 : 0;
+
+  document.getElementById('level-select').value = state.level;
 
   // income section
   const pretaxInput = document.getElementById('pretax-income-input');
@@ -1293,32 +1373,19 @@ document.getElementById('next-year-btn').addEventListener('click', () => {
   document.getElementById('hearts-modifier-input').value = '';
 });
 
-// Jumps specific expenses to hard-coded tiers: Groceries to its priciest
-// tier, everything else (Dining, Healthcare, Travel, Pet, and any other
-// revealed expense) to its cheapest tier. Then, with those tiers fixed,
-// spends the full available energy budget wherever it saves the most
-// money overall (not just greedily per-expense).
+// Jumps every expense to its own template-declared resetTarget tier
+// ('max' for Level 1's Groceries — its half of the cook-more/eat-out-less
+// pair — 'min', i.e. cheapest, for everything else on every level). Then,
+// with those tiers fixed, spends the full available energy budget
+// wherever it saves the most money overall (not just greedily per-expense).
 document.getElementById('set-lowest-btn').addEventListener('click', () => {
-  // Locked expenses are frozen — skipped entirely, both for the hard-coded
-  // tier jumps and for the energy reallocation below (their already-spent
-  // energy stays put and isn't available to redistribute).
-  function setLevel(key, levelIndex) {
-    const exp = expenses.find(e => e.key === key);
-    if (!exp || exp.locked) return;
-    exp.levelIndex = Math.max(0, Math.min(exp.levels.length - 1, levelIndex));
-  }
+  // Locked expenses are frozen — their tier is skipped, though their
+  // already-spent energy still participates in the reallocation below.
+  expenses.forEach((exp) => {
+    if (exp.locked) return;
+    exp.levelIndex = exp.resetTarget === 'max' ? exp.levels.length - 1 : 0;
+  });
 
-  const groceries = expenses.find(e => e.key === 'groceries');
-  setLevel('groceries', groceries.levels.length - 1); // most expensive
-  setLevel('dining', 0);
-  setLevel('healthcare', 0);
-  setLevel('travel', 0);
-  setLevel('pet', 0);
-  ['rent', 'transit', 'shopping', 'education'].forEach(key => setLevel(key, 0));
-
-  // Energy stays fully reallocatable regardless of lock — only the cost
-  // tier freezes — so this considers every visible expense with the full
-  // budget, same as before locking existed.
   const budget = state.total_energy - state.work_energy;
   const alloc = optimalEnergyAllocation(visibleExpenses(), budget);
   visibleExpenses().forEach(exp => {
@@ -1328,7 +1395,33 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
   render();
 });
 
-render();
+// Deep-clones the chosen level's expense/pending-reveal templates into the
+// live, mutable state (expense objects carry per-run mutable fields like
+// levelIndex/energy/locked, so templates must never be mutated directly),
+// resets every other piece of state to its shared default, and rebuilds
+// the expense-row DOM from scratch since the previous level's rows (keyed
+// by expense keys that may not even exist in the new level) are stale.
+function loadLevel(levelNum) {
+  Object.assign(state, DEFAULT_STATE);
+  state.level = levelNum;
+
+  expenses = structuredClone(EXPENSE_TEMPLATES[levelNum]);
+  pendingExpenses = [...PENDING_TEMPLATES[levelNum]];
+
+  expenseRowRefs.clear();
+  document.getElementById('expense-list').innerHTML = '';
+  document.getElementById('new-jar-savings-input').value = '';
+  document.getElementById('income-modifier-input').value = '';
+  document.getElementById('hearts-modifier-input').value = '';
+
+  render();
+}
+
+document.getElementById('level-select').addEventListener('change', (e) => {
+  loadLevel(Number(e.target.value));
+});
+
+loadLevel(1);
 </script>
 </body>
 </html>
