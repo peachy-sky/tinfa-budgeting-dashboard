@@ -58,6 +58,20 @@ separate expense sets sharing one system:
   so Level 0's much smaller dollar amounts (max $30) scale their own
   sliders correctly instead of inheriting Level 1's $2,500 reference.
 
+`LEVEL_STATE_OVERRIDES` layers level-specific values on top of
+`DEFAULT_STATE` inside `loadLevel()` (`Object.assign(state,
+DEFAULT_STATE, LEVEL_STATE_OVERRIDES[levelNum])`) for fields a level's
+own spreadsheet redefines. Level 1's override is `{}` (uses the shared
+defaults as-is); Level 0's is:
+
+```js
+{ annual_pretax_income: 600, total_energy: 3, work_energy: 2 }
+```
+
+— i.e. Level 0 starts at $600/yr pre-tax with only 1 of 3 total energy
+available to spend (2 always go to work), shown as "1 / 3 available" on
+the energy badge and 2 (not 3) work-diamonds next to Annual pre-tax income.
+
 Level 0 is a much smaller-scale sheet — sourced from
 `In-Game Budgeting L0.csv` — with only two WANT categories and no NEED
 expenses, no hidden/yearly-reveal expenses (`PENDING_TEMPLATES[0]` is
@@ -84,10 +98,12 @@ empty), and no Groceries/Dining-style inverse link:
 - Annual post-tax income = `annual_pretax_income - tax_amount +
   income_modifier`, live-computed, cascading into the needs/wants/savings
   percentages, the pie chart, and the over-budget alert.
-- Three static (non-draggable) filled ◆ diamonds sit next to the "Annual
-  pre-tax income" label, representing `work_energy` — the 3 energy always
-  spent earning that income. Purely decorative: no drag listener, and
-  never draws from or affects the draggable energy pool.
+- `state.work_energy` static (non-draggable) filled ◆ diamonds sit next to
+  the "Annual pre-tax income" label — `#work-diamonds`, rebuilt every
+  render as `'<div class="diamond filled static"></div>'.repeat(work_energy)`
+  — representing the energy always spent earning that income (3 on Level 1,
+  2 on Level 0). Purely decorative: no drag listener, and never draws from
+  or affects the draggable energy pool.
 
 ### 3. Expenses (the only player-editable section)
 Each expense has:

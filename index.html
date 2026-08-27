@@ -600,11 +600,7 @@
       <tr>
         <td>
           Annual pre-tax income
-          <span class="diamonds work-diamonds" title="3 energy always spent earning this income" aria-label="3 energy always spent earning this income">
-            <div class="diamond filled static"></div>
-            <div class="diamond filled static"></div>
-            <div class="diamond filled static"></div>
-          </span>
+          <span class="diamonds work-diamonds" id="work-diamonds"></span>
         </td>
         <td class="amt num income-cell">$<input type="number" id="pretax-income-input" class="income-input" min="0" step="500" aria-label="Annual pre-tax income"></td>
       </tr>
@@ -700,6 +696,19 @@ const DEFAULT_STATE = {
   hearts_modifier: 0,
 };
 const state = { ...DEFAULT_STATE, level: 1 };
+
+// Per-level overrides layered on top of DEFAULT_STATE by loadLevel() — for
+// fields a level's own spreadsheet redefines (Level 0's CSV has no income/
+// tax rows of its own, but the game design calls for a much smaller income
+// and energy budget there regardless).
+const LEVEL_STATE_OVERRIDES = {
+  1: {},
+  0: {
+    annual_pretax_income: 600,
+    total_energy: 3,
+    work_energy: 2, // leaves 1 of 3 energy available to spend on expenses
+  },
+};
 
 // Each expense level's `costs` array is indexed by energy spent (costs[0] = 0 energy, costs[1] = 1 energy, ...).
 // `resetTarget`: which tier "Reset to Lowest Costs" jumps this expense to
@@ -960,6 +969,12 @@ function render() {
   document.getElementById('level-select').value = state.level;
 
   // income section
+  const workDiamondsLabel = `${state.work_energy} energy always spent earning this income`;
+  const workDiamonds = document.getElementById('work-diamonds');
+  workDiamonds.title = workDiamondsLabel;
+  workDiamonds.setAttribute('aria-label', workDiamondsLabel);
+  workDiamonds.innerHTML = '<div class="diamond filled static"></div>'.repeat(state.work_energy);
+
   const pretaxInput = document.getElementById('pretax-income-input');
   if (document.activeElement !== pretaxInput) {
     pretaxInput.value = pretax;
@@ -1402,7 +1417,7 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
 // the expense-row DOM from scratch since the previous level's rows (keyed
 // by expense keys that may not even exist in the new level) are stale.
 function loadLevel(levelNum) {
-  Object.assign(state, DEFAULT_STATE);
+  Object.assign(state, DEFAULT_STATE, LEVEL_STATE_OVERRIDES[levelNum]);
   state.level = levelNum;
 
   expenses = structuredClone(EXPENSE_TEMPLATES[levelNum]);
