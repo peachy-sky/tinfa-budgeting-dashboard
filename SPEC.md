@@ -82,6 +82,81 @@ empty), and no Groceries/Dining-style inverse link:
 | Travel + Vacations + Experiences | WANT | $0 | 3 ($0 … −30) | 0 |
 | Shopping | WANT | $0 | 2 ($0 … −20) | 1 |
 
+## Level 1.5: spatial grid budgeting
+
+A third `<option value="1.5">` on `#level-select` swaps to a completely
+separate screen and a completely separate, self-contained system — it
+shares no data with `EXPENSE_TEMPLATES`/`PENDING_TEMPLATES`/`state` above,
+only the visual design tokens. Selecting it hides the masthead's
+pie/needs-wants-savings row and the Income, Expenses, Interest Calculator,
+Hearts, and Year sections; selecting Level 0 or 1 hides it and restores
+those. `setLevel1_5Visible(active)` does the toggling; `loadLevel()`
+branches on `levelNum === 1.5` before touching any Level 0/1 state.
+
+Backpack-Hero-style spatial packing puzzle: expenses have a footprint in
+grid cells and must be dragged onto a bounded tray instead of toggled in a
+list. Savings is never placed directly — it's whatever grid space is left
+unused.
+
+**Grid**: `l15State.monthlyIncome` (flat $4,000 for now) determines grid
+size — `l15BigSquareCount() = monthlyIncome / 1000` "big squares" of
+$1,000 each, arranged via `l15BigGridDims()` (solved today only for the
+4-big-square case → 2×2; anything else falls back to a single row and
+logs a warning), each subdivided into a fixed 2×2 of $250 "small squares".
+So $4,000/mo → 4 big squares → 16 total cells. A non-multiple-of-$1000
+income also just logs a console warning (assumed not to happen yet).
+Occupancy (`l15BuildOccupancy`) is tracked as one flat small-cell grid,
+not scoped per big square — an item's footprint can straddle a
+big-square boundary.
+
+**Items** (`L15_SHELF_ITEMS`, single-instance — placing one dims it on the
+shelf until dragged back out):
+
+| Item | Price | Cells | Sprite |
+|---|---|---|---|
+| Dining Out | $250 | 1 (1×1) | bread1.png |
+| Groceries | $1,000 | 4 (2×2) | bread4.png |
+| Transit | $250 | 1 (1×1) | bread1.png |
+| Phone Bill | $250 | 1 (1×1) | bread1.png |
+| Healthcare | $250 | 1 (1×1) | bread1.png |
+| Shopping | $250 | 1 (1×1) | bread1.png |
+| Travel | $500 | 2 (2×1) | bread2.png |
+
+`cells = Math.ceil(price / 250)`; shape comes from a fixed lookup
+(`L15_ITEM_SHAPES`) keyed by cell count — a future price needing 3 cells
+(e.g. $750) has no shape defined yet. Each item also carries a `category`
+field, currently always `null` — reserved for a future Needs/Wants
+(50/30/20) breakdown pass; no UI reads it yet.
+
+**Drag-and-drop** (`startL15Drag`/`l15OnDragMove`/`l15OnDragUp`): the same
+pointer-based pattern as the energy-diamond drag above (floating ghost,
+`elementFromPoint`+`closest()` for drop-target resolution) adapted for a
+multi-cell footprint — the ghost is sized to the item's own `w`×`h`, and
+the drop location is resolved to a candidate top-left cell
+(`l15CandidateFromPoint` → `l15PixelToCell`, which inverts the tray's
+pixel-position formula by nearest-cell search since the big-square gap
+makes it non-linear) rather than a single named target. A drop is valid
+only if every covered cell is in-bounds and unoccupied
+(`l15CanPlace`); cells preview green/red (`.drag-valid`/`.drag-invalid`)
+during the drag. Dropping on the shelf or the trash icon (which swaps
+`trash-closed.png` → `trash-open.png` on drag-over) removes the item;
+dropping on an invalid tray location snaps it back (no-op) rather than
+allowing overflow — the grid can never exceed 16/16 cells since it
+represents 100% of income.
+
+**Tooltip**: hover or click a shelf or placed item to show its name and
+price in a small floating bubble (`#l15-tooltip`) near the pointer.
+
+**Sidebar**: Monthly/Annual Cost = sum of placed item prices (× 12);
+Monthly/Annual Savings = `(totalCells − occupiedCells) × 250` (× 12) —
+recomputed on every `renderLevel1_5()` call, i.e. after every successful
+place/remove/move.
+
+Art assets (`assets/budgeting-tab/`, copied from
+`tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf
+background), `tray.png` (grid background), `bread1/2/4.png` (item
+sprites), `trash-closed.png`/`trash-open.png` (trash icon).
+
 ## Sections
 
 ### 1. Needs/Wants/Savings summary + pie chart

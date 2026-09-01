@@ -562,6 +562,183 @@
     }
     .totals { margin-left: 0; max-width: none; }
   }
+
+  /* ---------- Level 1.5: spatial grid ---------- */
+  #level1-5-section { --l15-cell: 84px; }
+  .l15-topline {
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+  .l15-topline .num { color: var(--ink); font-weight: 700; }
+
+  .l15-shelf {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background-image: url('assets/budgeting-tab/belt.png');
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--rule);
+    box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.08);
+  }
+  .l15-shelf-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: grab;
+    touch-action: none;
+    transition: background 0.1s ease, opacity 0.15s ease;
+  }
+  .l15-shelf-item:hover { background: rgba(255,255,255,0.35); }
+  .l15-shelf-item:active { cursor: grabbing; }
+  .l15-shelf-item.placed { opacity: 0.28; cursor: default; pointer-events: none; }
+  .l15-shelf-item img { display: block; width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+  .l15-shelf-item .l15-shelf-item-name {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+    text-align: center;
+  }
+
+  .l15-board {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+  .l15-tray {
+    position: relative;
+    background-image: url('assets/budgeting-tab/tray.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 14px;
+    padding: 18px;
+    display: inline-grid;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .l15-big-square {
+    display: grid;
+    grid-template-columns: repeat(2, var(--l15-cell));
+    grid-template-rows: repeat(2, var(--l15-cell));
+    gap: 2px;
+    background: rgba(0,0,0,0.12);
+    border-radius: 6px;
+    padding: 2px;
+  }
+  .l15-cell {
+    background: rgba(255,255,255,0.14);
+    border-radius: 4px;
+    transition: background 0.1s ease, outline-color 0.1s ease;
+    outline: 2px dashed transparent;
+    outline-offset: -2px;
+  }
+  .l15-cell.drag-valid { background: var(--accent-soft); outline-color: var(--accent); }
+  .l15-cell.drag-invalid { background: var(--danger-soft); outline-color: var(--danger); }
+
+  .l15-item {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: grab;
+    touch-action: none;
+    background: rgba(255,255,255,0.55);
+    border: 1.5px solid var(--rule);
+    box-shadow: 0 1px 3px var(--shadow);
+    transition: box-shadow 0.1s ease;
+  }
+  .l15-item:hover { box-shadow: 0 2px 8px var(--shadow); }
+  .l15-item:active { cursor: grabbing; }
+  .l15-item img { width: 60%; height: 60%; object-fit: contain; pointer-events: none; }
+
+  .l15-drag-ghost {
+    position: fixed;
+    top: 0; left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.7);
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 14px var(--shadow);
+  }
+  .l15-drag-ghost img { width: 60%; height: 60%; object-fit: contain; }
+
+  .l15-sidebar {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 16px 18px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .l15-sidebar .row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem; color: var(--ink-muted); }
+  .l15-sidebar .row .num { color: var(--ink); font-weight: 600; }
+  .l15-sidebar .row.grand {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid var(--rule);
+  }
+  .l15-sidebar .row.grand .num { font-size: 1.1rem; color: var(--accent); }
+
+  .l15-trash {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-top: 18px;
+    border-radius: 12px;
+    outline: 2px dashed transparent;
+    outline-offset: -2px;
+    transition: outline-color 0.1s ease, background 0.1s ease;
+  }
+  .l15-trash.drag-over { outline-color: var(--danger); background: var(--danger-soft); }
+  .l15-trash img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+
+  #l15-tooltip {
+    position: fixed;
+    top: 0; left: 0;
+    display: none;
+    background: var(--surface);
+    border: 1.5px solid var(--ink);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: 0 2px 8px var(--shadow);
+    pointer-events: none;
+    z-index: 1100;
+    white-space: nowrap;
+  }
+  #l15-tooltip .l15-tooltip-price { color: var(--accent); margin-left: 4px; }
+
+  @media (max-width: 760px) {
+    #level1-5-section { --l15-cell: 64px; }
+    .l15-board { flex-direction: column; }
+    .l15-sidebar { min-width: 0; width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -575,6 +752,7 @@
           <select id="level-select" aria-label="Select level">
             <option value="0">0</option>
             <option value="1" selected>1</option>
+            <option value="1.5">1.5</option>
           </select>
         </label>
       </div>
@@ -594,7 +772,29 @@
     </div>
   </div>
 
-  <section>
+  <section id="level1-5-section" style="display:none">
+    <div class="l15-topline">Monthly Income: <span class="num" id="l15-income">$0</span></div>
+
+    <div class="l15-shelf" id="l15-shelf"></div>
+
+    <div class="l15-board">
+      <div class="l15-tray" id="l15-tray"></div>
+      <aside class="l15-sidebar">
+        <div class="row"><span>Monthly Cost</span><span class="num" id="l15-monthly-cost">$0</span></div>
+        <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
+        <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
+        <div class="row"><span>Annual Savings</span><span class="num" id="l15-annual-savings">$0</span></div>
+      </aside>
+    </div>
+
+    <div class="l15-trash" id="l15-trash">
+      <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
+    </div>
+
+    <div id="l15-tooltip"></div>
+  </section>
+
+  <section id="income-section">
     <h2>Income</h2>
     <table class="tax-table">
       <tr>
@@ -613,7 +813,7 @@
     </table>
   </section>
 
-  <section>
+  <section id="expenses-section">
     <h2>Expenses</h2>
     <div class="energy-pool-row">
       <div></div>
@@ -642,7 +842,7 @@
     <div class="row grand"><span>Total annual savings</span><span class="num" id="total-savings">$0</span></div>
   </div>
 
-  <section>
+  <section id="interest-section">
     <h2>Interest Calculator</h2>
     <table class="tax-table">
       <tr><td>Current Jar Savings</td><td class="amt num">$<span id="current-jar-savings">0</span></td></tr>
@@ -658,7 +858,7 @@
     </table>
   </section>
 
-  <section>
+  <section id="hearts-section">
     <h2>Hearts</h2>
     <table class="tax-table">
       <tr><td>Hearts Last Year</td><td class="amt num" id="hearts-last-year">5</td></tr>
@@ -841,6 +1041,106 @@ const PENDING_TEMPLATES = {
 // automatically picked up everywhere without re-wiring any listeners.
 let expenses = [];
 let pendingExpenses = [];
+
+// ---------- Level 1.5: spatial grid ----------
+// Entirely separate system from Level 0/1 above — its own income figure,
+// its own item catalog, its own state. Nothing here reads or writes
+// `state`, `expenses`, `pendingExpenses`, or any EXPENSE_TEMPLATES.
+const L15_CELL_VALUE = 250; // dollars per small square
+
+// `category` is carried but unused — reserved for a future Needs/Wants
+// (50/30/20) breakdown pass, which will read it straight off placed items.
+const L15_SHELF_ITEMS = [
+  { key: 'dining',     name: 'Dining Out',  price: 250,  category: null, sprite: 'bread1.png' },
+  { key: 'groceries',  name: 'Groceries',   price: 1000, category: null, sprite: 'bread4.png' },
+  { key: 'transit',    name: 'Transit',     price: 250,  category: null, sprite: 'bread1.png' },
+  { key: 'phone',      name: 'Phone Bill',  price: 250,  category: null, sprite: 'bread1.png' },
+  { key: 'healthcare', name: 'Healthcare',  price: 250,  category: null, sprite: 'bread1.png' },
+  { key: 'shopping',   name: 'Shopping',    price: 250,  category: null, sprite: 'bread1.png' },
+  { key: 'travel',     name: 'Travel',      price: 500,  category: null, sprite: 'bread2.png' },
+];
+
+// cells-per-price -> footprint shape. Every current price maps to 1, 2, or
+// 4 cells; a price needing 3 cells (e.g. $750) has no shape defined yet.
+const L15_ITEM_SHAPES = { 1: { w: 1, h: 1 }, 2: { w: 2, h: 1 }, 4: { w: 2, h: 2 } };
+
+function l15ItemCells(price) { return Math.ceil(price / L15_CELL_VALUE); }
+function l15ItemShape(item) { return L15_ITEM_SHAPES[l15ItemCells(item.price)]; }
+
+const l15State = {
+  monthlyIncome: 4000, // flat for now; grid size is derived from this, not hardcoded
+  placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
+};
+
+function l15BigSquareCount() {
+  const count = l15State.monthlyIncome / 1000;
+  if (!Number.isInteger(count)) {
+    console.warn(`Level 1.5: monthly income $${l15State.monthlyIncome} is not a clean multiple of $1000 — grid sizing assumes it is.`);
+  }
+  return Math.max(1, Math.round(count));
+}
+
+// Arranging N big squares into a rows x cols layout is only solved for the
+// 4-big-square (2x2) case today; anything else falls back to a single row.
+function l15BigGridDims() {
+  const n = l15BigSquareCount();
+  if (n === 4) return { cols: 2, rows: 2 };
+  console.warn(`Level 1.5: no big-square layout defined for ${n} big squares — falling back to a single row.`);
+  return { cols: n, rows: 1 };
+}
+
+function l15GridDims() {
+  const { cols, rows } = l15BigGridDims();
+  return { cols: cols * 2, rows: rows * 2 };
+}
+
+function l15ResetState() {
+  l15State.placed = [];
+}
+
+function l15ItemByKey(key) { return L15_SHELF_ITEMS.find(i => i.key === key); }
+
+function l15IsShelfItemPlaced(key) { return l15State.placed.some(p => p.itemKey === key); }
+
+// Occupancy grid, excluding one placement (by itemKey) if given — used so
+// a placed item being dragged doesn't collide with its own current cells.
+function l15BuildOccupancy(excludeKey) {
+  const { cols, rows } = l15GridDims();
+  const grid = Array.from({ length: rows }, () => new Array(cols).fill(false));
+  l15State.placed.forEach((p) => {
+    if (p.itemKey === excludeKey) return;
+    const item = l15ItemByKey(p.itemKey);
+    const shape = l15ItemShape(item);
+    for (let dy = 0; dy < shape.h; dy++) {
+      for (let dx = 0; dx < shape.w; dx++) {
+        grid[p.row + dy][p.col + dx] = true;
+      }
+    }
+  });
+  return grid;
+}
+
+function l15CanPlace(item, col, row, excludeKey) {
+  const shape = l15ItemShape(item);
+  const { cols, rows } = l15GridDims();
+  if (col < 0 || row < 0 || col + shape.w > cols || row + shape.h > rows) return false;
+  const occ = l15BuildOccupancy(excludeKey);
+  for (let dy = 0; dy < shape.h; dy++) {
+    for (let dx = 0; dx < shape.w; dx++) {
+      if (occ[row + dy][col + dx]) return false;
+    }
+  }
+  return true;
+}
+
+function l15OccupiedCells() {
+  return l15State.placed.reduce((sum, p) => sum + l15ItemCells(l15ItemByKey(p.itemKey).price), 0);
+}
+
+function l15TotalCells() {
+  const { cols, rows } = l15GridDims();
+  return cols * rows;
+}
 
 // ---------- Derived getters ----------
 function currentCost(exp) {
@@ -1410,6 +1710,325 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
   render();
 });
 
+// ---------- Level 1.5: rendering ----------
+const l15ItemRefs = new Map(); // itemKey -> .l15-item element (built once, moved in place)
+let l15TooltipTarget = null;
+
+function l15CellPx() {
+  return parseFloat(getComputedStyle(document.getElementById('level1-5-section')).getPropertyValue('--l15-cell'));
+}
+
+function l15BuildGridDom() {
+  const tray = document.getElementById('l15-tray');
+  tray.innerHTML = '';
+  const { cols: bigCols, rows: bigRows } = l15BigGridDims();
+  tray.style.gridTemplateColumns = `repeat(${bigCols}, auto)`;
+  tray.style.gridTemplateRows = `repeat(${bigRows}, auto)`;
+  for (let i = 0; i < bigCols * bigRows; i++) {
+    const big = document.createElement('div');
+    big.className = 'l15-big-square';
+    for (let c = 0; c < 4; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'l15-cell';
+      big.appendChild(cell);
+    }
+    tray.appendChild(big);
+  }
+}
+
+function l15BuildShelfDom() {
+  const shelf = document.getElementById('l15-shelf');
+  shelf.innerHTML = '';
+  L15_SHELF_ITEMS.forEach((item) => {
+    const el = document.createElement('div');
+    el.className = 'l15-shelf-item';
+    el.dataset.itemKey = item.key;
+    el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}"><span class="l15-shelf-item-name">${item.name}</span>`;
+    el.addEventListener('pointerdown', (e) => {
+      if (el.classList.contains('placed')) return;
+      startL15Drag(e, { type: 'shelf', key: item.key });
+    });
+    el.addEventListener('mouseenter', () => l15ShowTooltip(el, item));
+    el.addEventListener('mouseleave', l15HideTooltip);
+    el.addEventListener('click', () => l15ShowTooltip(el, item));
+    shelf.appendChild(el);
+    l15ItemRefs.set(item.key, null); // placed-element ref filled in by renderLevel1_5
+  });
+}
+
+function l15ShowTooltip(el, item) {
+  const tip = document.getElementById('l15-tooltip');
+  const rect = el.getBoundingClientRect();
+  tip.innerHTML = `${item.name}<span class="l15-tooltip-price">$${item.price}/mo</span>`;
+  tip.style.display = 'block';
+  tip.style.left = (rect.left + rect.width / 2) + 'px';
+  tip.style.top = (rect.top - 8) + 'px';
+  tip.style.transform = 'translate(-50%, -100%)';
+  l15TooltipTarget = el;
+}
+
+function l15HideTooltip() {
+  document.getElementById('l15-tooltip').style.display = 'none';
+  l15TooltipTarget = null;
+}
+
+function renderLevel1_5() {
+  const cellPx = l15CellPx();
+
+  document.getElementById('l15-income').textContent = `$${l15State.monthlyIncome.toLocaleString()}`;
+
+  // Shelf: mark single-instance items placed/available.
+  document.querySelectorAll('.l15-shelf-item').forEach((el) => {
+    el.classList.toggle('placed', l15IsShelfItemPlaced(el.dataset.itemKey));
+  });
+
+  // Placed items: build once, position in place (mirrors expenseRowRefs).
+  const tray = document.getElementById('l15-tray');
+  const seen = new Set();
+  l15State.placed.forEach((p) => {
+    seen.add(p.itemKey);
+    const item = l15ItemByKey(p.itemKey);
+    const shape = l15ItemShape(item);
+    let el = l15ItemRefs.get(p.itemKey);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'l15-item';
+      el.dataset.itemKey = p.itemKey;
+      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}">`;
+      el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'placed', key: p.itemKey }));
+      el.addEventListener('mouseenter', () => l15ShowTooltip(el, item));
+      el.addEventListener('mouseleave', l15HideTooltip);
+      el.addEventListener('click', () => l15ShowTooltip(el, item));
+      l15ItemRefs.set(p.itemKey, el);
+    }
+    if (el.parentElement !== tray) tray.appendChild(el);
+    el.style.width = (shape.w * cellPx) + 'px';
+    el.style.height = (shape.h * cellPx) + 'px';
+    l15PositionPlacedItem(el, p, cellPx);
+  });
+
+  // Remove DOM for anything no longer placed.
+  l15ItemRefs.forEach((el, key) => {
+    if (!seen.has(key) && el) {
+      el.remove();
+      l15ItemRefs.set(key, null);
+    }
+  });
+
+  const monthlyCost = l15State.placed.reduce((sum, p) => sum + l15ItemByKey(p.itemKey).price, 0);
+  const annualCost = monthlyCost * 12;
+  const monthlySavings = (l15TotalCells() - l15OccupiedCells()) * L15_CELL_VALUE;
+  const annualSavings = monthlySavings * 12;
+  document.getElementById('l15-monthly-cost').textContent = `$${monthlyCost.toLocaleString()}`;
+  document.getElementById('l15-annual-cost').textContent = `$${annualCost.toLocaleString()}`;
+  document.getElementById('l15-monthly-savings').textContent = `$${monthlySavings.toLocaleString()}`;
+  document.getElementById('l15-annual-savings').textContent = `$${annualSavings.toLocaleString()}`;
+}
+
+// Positions a placed item over its (col,row), accounting for the tray's
+// own padding and the `gap: 10px` the tray puts between big squares (an
+// item crosses that gap once per big-square boundary it's past).
+function l15PositionPlacedItem(el, p, cellPx) {
+  const trayPad = 18;
+  const bigCol = Math.floor(p.col / 2);
+  const bigRow = Math.floor(p.row / 2);
+  const extraX = bigCol * 10;
+  const extraY = bigRow * 10;
+  el.style.left = (trayPad + p.col * cellPx + extraX) + 'px';
+  el.style.top = (trayPad + p.row * cellPx + extraY) + 'px';
+}
+
+// ---------- Level 1.5: drag-and-drop ----------
+// Mirrors the energy-diamond drag system above: pointerdown/pointermove/
+// pointerup, a floating ghost, elementFromPoint+closest() for drop-target
+// resolution. Sized to the item's actual footprint instead of one token,
+// and resolves grid drops to a candidate cell via tray-relative math
+// instead of a single named drop target.
+let l15DragGhost = null;
+let l15DragSource = null; // { type: 'shelf', key } | { type: 'placed', key }
+let l15DragCandidate = null; // { col, row } | null
+
+function l15MoveGhost(x, y) {
+  if (!l15DragGhost) return;
+  l15DragGhost.style.left = x + 'px';
+  l15DragGhost.style.top = y + 'px';
+}
+
+function l15ClearCellHighlights() {
+  document.querySelectorAll('.l15-cell.drag-valid, .l15-cell.drag-invalid').forEach((el) => {
+    el.classList.remove('drag-valid', 'drag-invalid');
+  });
+}
+
+// Inverse of l15PositionPlacedItem's pixel formula (trayPad + i*cellPx +
+// floor(i/2)*bigGap): finds the cell index whose top-left pixel is closest
+// to a given tray-local coordinate. A short loop rather than a closed-form
+// inversion since the grid is always tiny (currently 4 cells per axis).
+function l15PixelToCell(localPx, cellPx, cellCount) {
+  const trayPad = 18, bigGap = 10;
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < cellCount; i++) {
+    const pixel = trayPad + i * cellPx + Math.floor(i / 2) * bigGap;
+    const dist = Math.abs(localPx - pixel);
+    if (dist < bestDist) { best = i; bestDist = dist; }
+  }
+  return best;
+}
+
+function l15CandidateFromPoint(item, clientX, clientY, excludeKey) {
+  const tray = document.getElementById('l15-tray');
+  const trayRect = tray.getBoundingClientRect();
+  const cellPx = l15CellPx();
+  const shape = l15ItemShape(item);
+  const { cols, rows } = l15GridDims();
+  // Centered on pointer: offset by half the item's own footprint.
+  const localX = clientX - trayRect.left - (shape.w * cellPx) / 2;
+  const localY = clientY - trayRect.top - (shape.h * cellPx) / 2;
+  const col = l15PixelToCell(localX, cellPx, cols);
+  const row = l15PixelToCell(localY, cellPx, rows);
+  return { col, row };
+}
+
+function l15HighlightCandidate(item, candidate, valid) {
+  l15ClearCellHighlights();
+  if (!candidate) return;
+  const shape = l15ItemShape(item);
+  const { cols, rows } = l15GridDims();
+  const bigCols = l15BigGridDims().cols;
+  const cells = document.querySelectorAll('.l15-cell');
+  for (let dy = 0; dy < shape.h; dy++) {
+    for (let dx = 0; dx < shape.w; dx++) {
+      const c = candidate.col + dx;
+      const r = candidate.row + dy;
+      if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
+      const bigCol = Math.floor(c / 2), bigRow = Math.floor(r / 2);
+      const bigIndex = bigRow * bigCols + bigCol;
+      const localCol = c % 2, localRow = r % 2;
+      const cellIndex = localRow * 2 + localCol;
+      const big = cells[0] ? cells[0].closest('.l15-tray').children[bigIndex] : null;
+      const cell = big ? big.children[cellIndex] : null;
+      if (cell) cell.classList.add(valid ? 'drag-valid' : 'drag-invalid');
+    }
+  }
+}
+
+function l15SetTrashOpen(open) {
+  document.getElementById('l15-trash-img').src = `assets/budgeting-tab/${open ? 'trash-open.png' : 'trash-closed.png'}`;
+}
+
+function l15UpdateDragHighlight(clientX, clientY) {
+  document.querySelectorAll('.l15-trash, .l15-shelf').forEach(el => el.classList.remove('drag-over'));
+  l15SetTrashOpen(false);
+
+  const item = l15ItemByKey(l15DragSource.key);
+  const trayRect = document.getElementById('l15-tray').getBoundingClientRect();
+  const overTray = clientX >= trayRect.left && clientX <= trayRect.right && clientY >= trayRect.top && clientY <= trayRect.bottom;
+
+  if (overTray) {
+    const excludeKey = l15DragSource.type === 'placed' ? l15DragSource.key : null;
+    const candidate = l15CandidateFromPoint(item, clientX, clientY, excludeKey);
+    const valid = l15CanPlace(item, candidate.col, candidate.row, excludeKey);
+    l15DragCandidate = valid ? candidate : null;
+    l15HighlightCandidate(item, candidate, valid);
+    return;
+  }
+
+  l15DragCandidate = null;
+  l15ClearCellHighlights();
+  const el = document.elementFromPoint(clientX, clientY);
+  const target = el && el.closest('.l15-trash, .l15-shelf');
+  if (target) {
+    target.classList.add('drag-over');
+    if (target.id === 'l15-trash') l15SetTrashOpen(true);
+  }
+}
+
+function l15ApplyDrop(clientX, clientY) {
+  const source = l15DragSource;
+  const item = l15ItemByKey(source.key);
+
+  if (l15DragCandidate) {
+    if (source.type === 'placed') {
+      const p = l15State.placed.find(p => p.itemKey === source.key);
+      p.col = l15DragCandidate.col;
+      p.row = l15DragCandidate.row;
+    } else {
+      l15State.placed.push({ itemKey: source.key, col: l15DragCandidate.col, row: l15DragCandidate.row });
+    }
+    return;
+  }
+
+  const el = document.elementFromPoint(clientX, clientY);
+  const target = el && el.closest('.l15-trash, .l15-shelf');
+  if (target && source.type === 'placed') {
+    l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
+  }
+  // Dropped outside the tray/trash/shelf, or a shelf item dropped on an
+  // invalid tray cell: no-op (shelf item never left the shelf; a placed
+  // item just snaps back to its existing position on re-render).
+}
+
+function l15OnDragMove(e) {
+  l15MoveGhost(e.clientX, e.clientY);
+  l15UpdateDragHighlight(e.clientX, e.clientY);
+}
+
+function l15OnDragUp(e) {
+  document.removeEventListener('pointermove', l15OnDragMove);
+  document.removeEventListener('pointerup', l15OnDragUp);
+  l15ClearCellHighlights();
+  document.querySelectorAll('.l15-trash, .l15-shelf').forEach(el => el.classList.remove('drag-over'));
+  l15SetTrashOpen(false);
+
+  l15ApplyDrop(e.clientX, e.clientY);
+
+  if (l15DragGhost) {
+    l15DragGhost.remove();
+    l15DragGhost = null;
+  }
+  l15DragSource = null;
+  l15DragCandidate = null;
+  renderLevel1_5();
+}
+
+function startL15Drag(e, source) {
+  e.preventDefault();
+  l15DragSource = source;
+  const item = l15ItemByKey(source.key);
+  const shape = l15ItemShape(item);
+  const cellPx = l15CellPx();
+
+  l15DragGhost = document.createElement('div');
+  l15DragGhost.className = 'l15-drag-ghost';
+  l15DragGhost.style.width = (shape.w * cellPx) + 'px';
+  l15DragGhost.style.height = (shape.h * cellPx) + 'px';
+  l15DragGhost.style.transform = 'translate(-50%, -50%)';
+  l15DragGhost.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}">`;
+  document.body.appendChild(l15DragGhost);
+  l15MoveGhost(e.clientX, e.clientY);
+
+  document.addEventListener('pointermove', l15OnDragMove);
+  document.addEventListener('pointerup', l15OnDragUp);
+}
+
+document.getElementById('l15-trash').addEventListener('pointerdown', (e) => e.preventDefault());
+
+// ---------- Level 1.5: show/hide ----------
+// Toggles between the fully separate Level 1.5 screen and the existing
+// Level 0/1 screen (masthead pie/needs-wants-savings row, Income, Expenses,
+// Interest Calculator, Hearts, Year sections).
+function setLevel1_5Visible(active) {
+  document.getElementById('level1-5-section').style.display = active ? '' : 'none';
+  document.querySelectorAll('.masthead .summary-line, .masthead .pct-row, .pie-wrap').forEach((el) => {
+    el.style.display = active ? 'none' : '';
+  });
+  ['income-section', 'expenses-section', 'interest-section', 'hearts-section'].forEach((id) => {
+    document.getElementById(id).style.display = active ? 'none' : '';
+  });
+  document.querySelector('.totals').style.display = active ? 'none' : '';
+  document.querySelector('.year-section').style.display = active ? 'none' : '';
+}
+
 // Deep-clones the chosen level's expense/pending-reveal templates into the
 // live, mutable state (expense objects carry per-run mutable fields like
 // levelIndex/energy/locked, so templates must never be mutated directly),
@@ -1417,6 +2036,16 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
 // the expense-row DOM from scratch since the previous level's rows (keyed
 // by expense keys that may not even exist in the new level) are stale.
 function loadLevel(levelNum) {
+  if (levelNum === 1.5) {
+    setLevel1_5Visible(true);
+    l15ResetState();
+    l15BuildGridDom();
+    l15BuildShelfDom();
+    renderLevel1_5();
+    return;
+  }
+  setLevel1_5Visible(false);
+
   Object.assign(state, DEFAULT_STATE, LEVEL_STATE_OVERRIDES[levelNum]);
   state.level = levelNum;
 
