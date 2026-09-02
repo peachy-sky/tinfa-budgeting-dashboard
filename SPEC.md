@@ -194,6 +194,23 @@ Monthly/Annual Savings = `(totalCells − occupiedCells) × 250` (× 12) —
 recomputed on every `renderLevel1_5()` call, i.e. after every successful
 place/remove/move.
 
+**Hearts**: every $1,000-tier item carries `hearts: 1` (set in
+`l15MakeTiers`; every other tier is `hearts: 0`) and shows a ❤️ badge
+(`.l15-heart-badge`, absolutely positioned over the icon) on the shelf, on
+the drag ghost, and once placed on the grid — a purely visual/data cue for
+now, with no UI gate on which categories can carry one. A second card
+(`.l15-hearts-box`, same `.l15-sidebar` styling) sits directly under the
+cost/savings card on the right, mirroring Level 1's Hearts section:
+`l15State.heartsLastYear` (starts at 5, matching Level 1's
+`DEFAULT_STATE.hearts_last_year`) + `l15HeartsThisYear()` (sum of `hearts`
+across every entry in `l15State.placed`, i.e. one point per $1,000 item
+currently on the grid) + `l15State.heartsModifier` (free-entry number
+input, `#l15-hearts-modifier-input`) = `l15CurrentHeartsTotal()`. This is
+a separate, Level-1.5-only heart total — it does not read or write
+`state.hearts_last_year`/`heartsThisYear()` from Level 0/1, and resets to
+5/0 in `l15ResetState()` on every level switch, same as the rest of
+`l15State`.
+
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf
 background), `tray.png` (grid background), `bread1/2/4.png` (item

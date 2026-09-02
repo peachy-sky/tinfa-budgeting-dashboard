@@ -652,6 +652,7 @@
   }
   .l15-shelf-item:hover { background: rgba(255,255,255,0.4); }
   .l15-shelf-item:active { cursor: grabbing; }
+  .l15-shelf-icon-wrap { position: relative; display: inline-block; }
   .l15-shelf-item img { display: block; object-fit: contain; pointer-events: none; }
   .l15-shelf-item .l15-shelf-item-price {
     font-size: 0.56rem;
@@ -729,6 +730,11 @@
   }
   .l15-drag-ghost img { width: 60%; height: 60%; object-fit: contain; }
 
+  .l15-side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
   .l15-sidebar {
     background: var(--surface-2);
     border: 1px solid var(--rule);
@@ -739,7 +745,7 @@
     flex-direction: column;
     gap: 8px;
   }
-  .l15-sidebar .row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem; color: var(--ink-muted); }
+  .l15-sidebar .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.92rem; color: var(--ink-muted); }
   .l15-sidebar .row .num { color: var(--ink); font-weight: 600; }
   .l15-sidebar .row.grand {
     font-size: 1.05rem;
@@ -750,6 +756,25 @@
     border-top: 1px solid var(--rule);
   }
   .l15-sidebar .row.grand .num { font-size: 1.1rem; color: var(--accent); }
+  .l15-hearts-box .row.grand .num { color: var(--danger); }
+  .l15-hearts-title {
+    font-family: 'Lazy Dog', 'Segoe Script', cursive;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .l15-hearts-box .income-input { width: 56px; }
+
+  .l15-heart-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 14px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
+    pointer-events: none;
+  }
 
   .l15-trash {
     display: flex;
@@ -799,6 +824,7 @@
   @media (max-width: 760px) {
     #level1-5-section { --l15-cell: 64px; }
     .l15-board { flex-direction: column; }
+    .l15-side-col { width: 100%; }
     .l15-sidebar { min-width: 0; width: 100%; }
   }
 </style>
@@ -850,12 +876,21 @@
       <div class="l15-trash" id="l15-trash">
         <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
       </div>
-      <aside class="l15-sidebar">
-        <div class="row"><span>Monthly Cost</span><span class="num" id="l15-monthly-cost">$0</span></div>
-        <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
-        <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
-        <div class="row"><span>Annual Savings</span><span class="num" id="l15-annual-savings">$0</span></div>
-      </aside>
+      <div class="l15-side-col">
+        <aside class="l15-sidebar">
+          <div class="row"><span>Monthly Cost</span><span class="num" id="l15-monthly-cost">$0</span></div>
+          <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
+          <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
+          <div class="row"><span>Annual Savings</span><span class="num" id="l15-annual-savings">$0</span></div>
+        </aside>
+        <aside class="l15-sidebar l15-hearts-box">
+          <div class="l15-hearts-title">Hearts</div>
+          <div class="row"><span>Hearts Last Year</span><span class="num" id="l15-hearts-last-year">5</span></div>
+          <div class="row"><span>Hearts This Year</span><span class="num" id="l15-hearts-this-year">0</span></div>
+          <div class="row"><span>Modifier</span><span class="income-cell"><input type="number" id="l15-hearts-modifier-input" class="income-input" step="0.25" aria-label="Hearts Modifier"></span></div>
+          <div class="row grand"><span>Current Hearts Total</span><span class="num" id="l15-hearts-total">0</span></div>
+        </aside>
+      </div>
     </div>
 
     <div id="l15-tooltip"></div>
@@ -1139,6 +1174,7 @@ function l15MakeTiers(categoryKey) {
     price,
     category: null,
     sprite: L15_SPRITE_BY_CELLS[l15ItemCells(price)],
+    hearts: price === 1000 ? 1 : 0, // $1000 tiers show a heart badge and count toward Hearts This Year
   }));
 }
 
@@ -1162,7 +1198,20 @@ const L15_CATEGORIES = [
 const l15State = {
   monthlyIncome: 4000, // flat for now; grid size is derived from this, not hardcoded
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
+  heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
+  heartsModifier: 0,
 };
+
+// Sum of `hearts` across every placed item (currently only $1000 tiers
+// carry a nonzero value) — mirrors Level 1's heartsThisYear(), but reads
+// l15State.placed instead of the visible-expenses list.
+function l15HeartsThisYear() {
+  return l15State.placed.reduce((sum, p) => sum + (l15ItemByKey(p.itemKey).hearts || 0), 0);
+}
+
+function l15CurrentHeartsTotal() {
+  return l15State.heartsLastYear + l15HeartsThisYear() + l15State.heartsModifier;
+}
 
 function l15BigSquareCount() {
   const count = l15State.monthlyIncome / 1000;
@@ -1188,6 +1237,8 @@ function l15GridDims() {
 
 function l15ResetState() {
   l15State.placed = [];
+  l15State.heartsLastYear = 5;
+  l15State.heartsModifier = 0;
 }
 
 function l15ItemByKey(key) {
@@ -1872,7 +1923,7 @@ function l15BuildShelfDom() {
       const el = document.createElement('div');
       el.className = 'l15-shelf-item';
       el.dataset.itemKey = item.key;
-      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-price">$${item.price}</span>`;
+      el.innerHTML = `<div class="l15-shelf-icon-wrap"><img src="${l15AssetUri(item.sprite)}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}</div><span class="l15-shelf-item-price">$${item.price}</span>`;
       el.addEventListener('pointerdown', (e) => {
         if (catEl.classList.contains('placed')) return;
         startL15Drag(e, { type: 'shelf', key: item.key });
@@ -1929,7 +1980,7 @@ function renderLevel1_5() {
       el = document.createElement('div');
       el.className = 'l15-item';
       el.dataset.itemKey = p.itemKey;
-      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">`;
+      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}`;
       el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'placed', key: p.itemKey }));
       el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
       el.addEventListener('mouseleave', l15HideTooltip);
@@ -1958,6 +2009,14 @@ function renderLevel1_5() {
   document.getElementById('l15-annual-cost').textContent = `$${annualCost.toLocaleString()}`;
   document.getElementById('l15-monthly-savings').textContent = `$${monthlySavings.toLocaleString()}`;
   document.getElementById('l15-annual-savings').textContent = `$${annualSavings.toLocaleString()}`;
+
+  document.getElementById('l15-hearts-last-year').textContent = l15State.heartsLastYear.toLocaleString();
+  document.getElementById('l15-hearts-this-year').textContent = l15HeartsThisYear().toLocaleString();
+  const heartsModifierInput = document.getElementById('l15-hearts-modifier-input');
+  if (document.activeElement !== heartsModifierInput) {
+    heartsModifierInput.value = l15State.heartsModifier;
+  }
+  document.getElementById('l15-hearts-total').textContent = l15CurrentHeartsTotal().toLocaleString();
 }
 
 // Positions a placed item over its (col,row), accounting for the tray's
@@ -2152,7 +2211,7 @@ function startL15Drag(e, source) {
   l15DragGhost.style.width = (shape.w * cellPx) + 'px';
   l15DragGhost.style.height = (shape.h * cellPx) + 'px';
   l15DragGhost.style.transform = 'translate(-50%, -50%)';
-  l15DragGhost.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">`;
+  l15DragGhost.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}`;
   document.body.appendChild(l15DragGhost);
   l15MoveGhost(e.clientX, e.clientY);
 
@@ -2161,6 +2220,11 @@ function startL15Drag(e, source) {
 }
 
 document.getElementById('l15-trash').addEventListener('pointerdown', (e) => e.preventDefault());
+
+document.getElementById('l15-hearts-modifier-input').addEventListener('input', (e) => {
+  l15State.heartsModifier = Number(e.target.value) || 0;
+  renderLevel1_5();
+});
 
 // ---------- Level 1.5: belt scroll ----------
 // One scrollable row instead of wrapping to multiple rows; hovering
