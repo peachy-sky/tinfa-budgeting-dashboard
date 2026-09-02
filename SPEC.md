@@ -157,7 +157,8 @@ only if every covered cell is in-bounds and unoccupied
 (`l15CanPlace`); cells preview green/red (`.drag-valid`/`.drag-invalid`)
 during the drag. Dropping on the shelf or the trash icon (which swaps
 `trash-closed.png` → `trash-open.png` on drag-over, and sits to the right
-of the tray at 3× the size of the earlier icons) removes the item;
+of the tray at 384×384px, well oversized relative to the tray, for an
+easy drop target) removes the item;
 dropping on an invalid tray location snaps it back and shows a red alert
 (`l15ShowAlert`, `#l15-alert`) instead of allowing overflow — the grid can
 never exceed 16/16 cells since it represents 100% of income. The alert
@@ -210,6 +211,17 @@ a separate, Level-1.5-only heart total — it does not read or write
 `state.hearts_last_year`/`heartsThisYear()` from Level 0/1, and resets to
 5/0 in `l15ResetState()` on every level switch, same as the rest of
 `l15State`.
+
+**Interest Calculator**: a third card (`.l15-interest-box`) sits between
+the cost/savings card and the Hearts card, mirroring Level 1's Interest
+Calculator field-for-field: Current Jar Savings (`l15State.currentJarSavings`,
+read-only display), New Jar Savings (`l15State.newJarSavings`, number
+input) and Jar Interest Rate (`l15State.jarInterestRate`, %, clamped ≥ 0
+same as Level 1), combined by `l15EarnedInterest()` — `(current + new) *
+(rate / 100)` — into "This year's interest". Unlike Level 1, there's no
+Next Year button to roll `newJarSavings`/interest into `currentJarSavings`
+(the Year section stays hidden for Level 1.5), so this is a live
+what-if figure only; all three fields reset to 0 in `l15ResetState()`.
 
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf

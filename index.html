@@ -764,7 +764,7 @@
     color: var(--ink);
     margin-bottom: 2px;
   }
-  .l15-hearts-box .income-input { width: 56px; }
+  .l15-hearts-box .income-input, .l15-interest-box .income-input { width: 56px; }
 
   .l15-heart-badge {
     position: absolute;
@@ -780,8 +780,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 192px;
-    height: 192px;
+    width: 384px;
+    height: 384px;
     flex-shrink: 0;
     border-radius: 16px;
     outline: 2px dashed transparent;
@@ -789,7 +789,7 @@
     transition: outline-color 0.1s ease, background 0.1s ease;
   }
   .l15-trash.drag-over { outline-color: var(--danger); background: var(--danger-soft); }
-  .l15-trash img { width: 132px; height: 132px; object-fit: contain; pointer-events: none; }
+  .l15-trash img { width: 264px; height: 264px; object-fit: contain; pointer-events: none; }
 
   #l15-tooltip {
     position: fixed;
@@ -826,6 +826,8 @@
     .l15-board { flex-direction: column; }
     .l15-side-col { width: 100%; }
     .l15-sidebar { min-width: 0; width: 100%; }
+    .l15-trash { width: 160px; height: 160px; }
+    .l15-trash img { width: 110px; height: 110px; }
   }
 </style>
 </head>
@@ -882,6 +884,13 @@
           <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
           <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
           <div class="row"><span>Annual Savings</span><span class="num" id="l15-annual-savings">$0</span></div>
+        </aside>
+        <aside class="l15-sidebar l15-interest-box">
+          <div class="l15-hearts-title">Interest Calculator</div>
+          <div class="row"><span>Current Jar Savings</span><span class="num" id="l15-current-jar-savings">$0</span></div>
+          <div class="row"><span>New Jar Savings</span><span class="income-cell">$<input type="number" id="l15-new-jar-savings-input" class="income-input" step="100" aria-label="New Jar Savings"></span></div>
+          <div class="row"><span>Jar Interest Rate</span><span class="income-cell"><input type="number" id="l15-jar-interest-rate-input" class="income-input rate-input" min="0" step="0.5" aria-label="Jar Interest Rate">%</span></div>
+          <div class="row grand"><span>This year's interest</span><span class="num" id="l15-earned-interest">$0</span></div>
         </aside>
         <aside class="l15-sidebar l15-hearts-box">
           <div class="l15-hearts-title">Hearts</div>
@@ -1200,6 +1209,9 @@ const l15State = {
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
   heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
   heartsModifier: 0,
+  currentJarSavings: 0,
+  newJarSavings: 0,
+  jarInterestRate: 0, // player enters e.g. "3" meaning 3% (0.03)
 };
 
 // Sum of `hearts` across every placed item (currently only $1000 tiers
@@ -1211,6 +1223,13 @@ function l15HeartsThisYear() {
 
 function l15CurrentHeartsTotal() {
   return l15State.heartsLastYear + l15HeartsThisYear() + l15State.heartsModifier;
+}
+
+// Mirrors Level 1's earnedInterest() — there's no Next Year rollover in
+// Level 1.5 (that section is hidden), so this is just the live "this
+// year's interest" figure, not accumulated into currentJarSavings anywhere.
+function l15EarnedInterest() {
+  return (l15State.currentJarSavings + l15State.newJarSavings) * (l15State.jarInterestRate / 100);
 }
 
 function l15BigSquareCount() {
@@ -1239,6 +1258,9 @@ function l15ResetState() {
   l15State.placed = [];
   l15State.heartsLastYear = 5;
   l15State.heartsModifier = 0;
+  l15State.currentJarSavings = 0;
+  l15State.newJarSavings = 0;
+  l15State.jarInterestRate = 0;
 }
 
 function l15ItemByKey(key) {
@@ -2010,6 +2032,17 @@ function renderLevel1_5() {
   document.getElementById('l15-monthly-savings').textContent = `$${monthlySavings.toLocaleString()}`;
   document.getElementById('l15-annual-savings').textContent = `$${annualSavings.toLocaleString()}`;
 
+  document.getElementById('l15-current-jar-savings').textContent = `$${Math.round(l15State.currentJarSavings).toLocaleString()}`;
+  const newJarInput = document.getElementById('l15-new-jar-savings-input');
+  if (document.activeElement !== newJarInput) {
+    newJarInput.value = l15State.newJarSavings;
+  }
+  const jarRateInput = document.getElementById('l15-jar-interest-rate-input');
+  if (document.activeElement !== jarRateInput) {
+    jarRateInput.value = l15State.jarInterestRate;
+  }
+  document.getElementById('l15-earned-interest').textContent = `$${Math.round(l15EarnedInterest()).toLocaleString()}`;
+
   document.getElementById('l15-hearts-last-year').textContent = l15State.heartsLastYear.toLocaleString();
   document.getElementById('l15-hearts-this-year').textContent = l15HeartsThisYear().toLocaleString();
   const heartsModifierInput = document.getElementById('l15-hearts-modifier-input');
@@ -2223,6 +2256,16 @@ document.getElementById('l15-trash').addEventListener('pointerdown', (e) => e.pr
 
 document.getElementById('l15-hearts-modifier-input').addEventListener('input', (e) => {
   l15State.heartsModifier = Number(e.target.value) || 0;
+  renderLevel1_5();
+});
+
+document.getElementById('l15-new-jar-savings-input').addEventListener('input', (e) => {
+  l15State.newJarSavings = Number(e.target.value) || 0;
+  renderLevel1_5();
+});
+
+document.getElementById('l15-jar-interest-rate-input').addEventListener('input', (e) => {
+  l15State.jarInterestRate = Math.max(0, Number(e.target.value) || 0);
   renderLevel1_5();
 });
 
