@@ -156,13 +156,38 @@ makes it non-linear) rather than a single named target. A drop is valid
 only if every covered cell is in-bounds and unoccupied
 (`l15CanPlace`); cells preview green/red (`.drag-valid`/`.drag-invalid`)
 during the drag. Dropping on the shelf or the trash icon (which swaps
-`trash-closed.png` → `trash-open.png` on drag-over) removes the item;
-dropping on an invalid tray location snaps it back (no-op) rather than
-allowing overflow — the grid can never exceed 16/16 cells since it
-represents 100% of income.
+`trash-closed.png` → `trash-open.png` on drag-over, and sits to the right
+of the tray at 3× the size of the earlier icons) removes the item;
+dropping on an invalid tray location snaps it back and shows a red alert
+(`l15ShowAlert`, `#l15-alert`) instead of allowing overflow — the grid can
+never exceed 16/16 cells since it represents 100% of income. The alert
+text depends on *why* the drop failed (`l15AnyValidPlacement` scans every
+cell for whether the item fits anywhere else): "Only place expenses in a
+free budget spot." if it collided with an occupied cell but room exists
+elsewhere, or "There is not enough space in the budget for that!" if the
+item can't fit anywhere at all given current occupancy.
+
+Every dynamic (JS-built) asset path routes through one `l15AssetUri(file)`
+helper rather than being constructed inline — the Artifact publish build
+(`build_artifact.js`, scratchpad) swaps that single function's body for a
+lookup into an embedded base64 map, since a published Artifact can't
+fetch relative files. Route any new dynamic image reference through this
+helper, not a hand-built path string, or the published copy will 404 for
+just that one call site while everything else keeps working (this exact
+bug shipped once for the trash icon, which broke the instant any drag
+started because `l15SetTrashOpen` built its path with a ternary the old
+per-call-site regex didn't catch).
 
 **Tooltip**: hover or click a shelf or placed item to show its name and
 price in a small floating bubble (`#l15-tooltip`) near the pointer.
+
+**Belt scrolling**: the shelf is a single non-wrapping row
+(`.l15-shelf { flex-wrap: nowrap; overflow-x: hidden }`) inside
+`.l15-shelf-wrap`, with a left/right arrow button overlaid on each edge.
+Hovering an arrow starts a `requestAnimationFrame` loop
+(`l15StartShelfScroll`/`l15ScrollStep`) nudging `scrollLeft` every frame
+until the pointer leaves; arrows hide via `l15UpdateShelfArrows` once
+scrolled fully to that edge.
 
 **Sidebar**: Monthly/Annual Cost = sum of placed item prices (× 12);
 Monthly/Annual Savings = `(totalCells − occupiedCells) × 250` (× 12) —

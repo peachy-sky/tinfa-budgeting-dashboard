@@ -572,9 +572,12 @@
   }
   .l15-topline .num { color: var(--ink); font-weight: 700; }
 
+  .l15-shelf-wrap {
+    position: relative;
+  }
   .l15-shelf {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 10px;
     align-items: flex-start;
     padding: 14px 16px;
@@ -584,7 +587,38 @@
     background-position: center;
     border: 1px solid var(--rule);
     box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.08);
+    overflow-x: hidden;
+    scroll-behavior: auto;
   }
+  .l15-shelf-arrow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--surface);
+    font-size: 1.1rem;
+    cursor: pointer;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .l15-shelf-wrap:hover .l15-shelf-arrow { opacity: 1; }
+  .l15-shelf-arrow-left {
+    left: 0;
+    border-radius: 12px 0 0 12px;
+    background: linear-gradient(to right, rgba(0,0,0,0.35), transparent);
+  }
+  .l15-shelf-arrow-right {
+    right: 0;
+    border-radius: 0 12px 12px 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.35), transparent);
+  }
+  .l15-shelf-arrow:hover { color: var(--gold); }
   .l15-shelf-category {
     display: flex;
     flex-direction: column;
@@ -721,16 +755,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
-    margin-top: 18px;
-    border-radius: 12px;
+    width: 192px;
+    height: 192px;
+    flex-shrink: 0;
+    border-radius: 16px;
     outline: 2px dashed transparent;
     outline-offset: -2px;
     transition: outline-color 0.1s ease, background 0.1s ease;
   }
   .l15-trash.drag-over { outline-color: var(--danger); background: var(--danger-soft); }
-  .l15-trash img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+  .l15-trash img { width: 132px; height: 132px; object-fit: contain; pointer-events: none; }
 
   #l15-tooltip {
     position: fixed;
@@ -749,6 +783,18 @@
     white-space: nowrap;
   }
   #l15-tooltip .l15-tooltip-price { color: var(--accent); margin-left: 4px; }
+
+  #l15-alert {
+    display: none;
+    margin-bottom: 12px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: var(--danger-soft);
+    border: 1.5px solid var(--danger);
+    color: var(--danger);
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
 
   @media (max-width: 760px) {
     #level1-5-section { --l15-cell: 64px; }
@@ -791,20 +837,25 @@
   <section id="level1-5-section" style="display:none">
     <div class="l15-topline">Monthly Income: <span class="num" id="l15-income">$0</span></div>
 
-    <div class="l15-shelf" id="l15-shelf"></div>
+    <div class="l15-shelf-wrap">
+      <button type="button" class="l15-shelf-arrow l15-shelf-arrow-left" id="l15-shelf-arrow-left" aria-label="Scroll shelf left">&#10094;</button>
+      <div class="l15-shelf" id="l15-shelf"></div>
+      <button type="button" class="l15-shelf-arrow l15-shelf-arrow-right" id="l15-shelf-arrow-right" aria-label="Scroll shelf right">&#10095;</button>
+    </div>
+
+    <div id="l15-alert"></div>
 
     <div class="l15-board">
       <div class="l15-tray" id="l15-tray"></div>
+      <div class="l15-trash" id="l15-trash">
+        <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
+      </div>
       <aside class="l15-sidebar">
         <div class="row"><span>Monthly Cost</span><span class="num" id="l15-monthly-cost">$0</span></div>
         <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
         <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
         <div class="row"><span>Annual Savings</span><span class="num" id="l15-annual-savings">$0</span></div>
       </aside>
-    </div>
-
-    <div class="l15-trash" id="l15-trash">
-      <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
     </div>
 
     <div id="l15-tooltip"></div>
@@ -1063,6 +1114,13 @@ let pendingExpenses = [];
 // its own item catalog, its own state. Nothing here reads or writes
 // `state`, `expenses`, `pendingExpenses`, or any EXPENSE_TEMPLATES.
 const L15_CELL_VALUE = 250; // dollars per small square
+
+// Single seam every Level 1.5 image path goes through — locally this is
+// just a relative path, but the Artifact publish build swaps this exact
+// function body for a base64 data-URI lookup (Artifacts can't fetch
+// relative files). Route every dynamic asset reference through this
+// rather than building the path inline, or the published copy breaks.
+function l15AssetUri(file) { return 'assets/budgeting-tab/' + file; }
 
 // cells-per-price -> footprint shape. Every current price maps to 1, 2, or
 // 4 cells; a price needing 3 cells (e.g. $750) has no shape defined yet.
@@ -1814,7 +1872,7 @@ function l15BuildShelfDom() {
       const el = document.createElement('div');
       el.className = 'l15-shelf-item';
       el.dataset.itemKey = item.key;
-      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-price">$${item.price}</span>`;
+      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-price">$${item.price}</span>`;
       el.addEventListener('pointerdown', (e) => {
         if (catEl.classList.contains('placed')) return;
         startL15Drag(e, { type: 'shelf', key: item.key });
@@ -1828,6 +1886,8 @@ function l15BuildShelfDom() {
     catEl.appendChild(tiersEl);
     shelf.appendChild(catEl);
   });
+  shelf.scrollLeft = 0;
+  l15UpdateShelfArrows();
 }
 
 function l15ShowTooltip(el, category, item) {
@@ -1869,7 +1929,7 @@ function renderLevel1_5() {
       el = document.createElement('div');
       el.className = 'l15-item';
       el.dataset.itemKey = p.itemKey;
-      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}">`;
+      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">`;
       el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'placed', key: p.itemKey }));
       el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
       el.addEventListener('mouseleave', l15HideTooltip);
@@ -1988,7 +2048,7 @@ function l15HighlightCandidate(item, candidate, valid) {
 }
 
 function l15SetTrashOpen(open) {
-  document.getElementById('l15-trash-img').src = `assets/budgeting-tab/${open ? 'trash-open.png' : 'trash-closed.png'}`;
+  document.getElementById('l15-trash-img').src = l15AssetUri(open ? 'trash-open.png' : 'trash-closed.png');
 }
 
 function l15UpdateDragHighlight(clientX, clientY) {
@@ -2037,10 +2097,23 @@ function l15ApplyDrop(clientX, clientY) {
   const target = el && el.closest('.l15-trash, .l15-shelf');
   if (target && source.type === 'placed') {
     l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
+    return;
   }
-  // Dropped outside the tray/trash/shelf, or a shelf item dropped on an
-  // invalid tray cell: no-op (shelf item never left the shelf; a placed
-  // item just snaps back to its existing position on re-render).
+  if (target) return; // dropped on the shelf/trash from the shelf itself: no-op
+
+  const trayRect = document.getElementById('l15-tray').getBoundingClientRect();
+  const overTray = clientX >= trayRect.left && clientX <= trayRect.right && clientY >= trayRect.top && clientY <= trayRect.bottom;
+  if (overTray) {
+    const excludeKey = source.type === 'placed' ? source.key : null;
+    l15ShowAlert(
+      l15AnyValidPlacement(item, excludeKey)
+        ? 'Only place expenses in a free budget spot.'
+        : 'There is not enough space in the budget for that!'
+    );
+  }
+  // Dropped outside the tray/trash/shelf entirely: no-op (shelf item never
+  // left the shelf; a placed item just snaps back to its existing
+  // position on re-render).
 }
 
 function l15OnDragMove(e) {
@@ -2079,7 +2152,7 @@ function startL15Drag(e, source) {
   l15DragGhost.style.width = (shape.w * cellPx) + 'px';
   l15DragGhost.style.height = (shape.h * cellPx) + 'px';
   l15DragGhost.style.transform = 'translate(-50%, -50%)';
-  l15DragGhost.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}">`;
+  l15DragGhost.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">`;
   document.body.appendChild(l15DragGhost);
   l15MoveGhost(e.clientX, e.clientY);
 
@@ -2088,6 +2161,72 @@ function startL15Drag(e, source) {
 }
 
 document.getElementById('l15-trash').addEventListener('pointerdown', (e) => e.preventDefault());
+
+// ---------- Level 1.5: belt scroll ----------
+// One scrollable row instead of wrapping to multiple rows; hovering
+// either edge arrow auto-scrolls that direction for as long as it's
+// hovered, stopping on mouseleave/mouseup.
+let l15ScrollDir = 0; // -1, 0, or 1
+let l15ScrollRaf = null;
+
+function l15ScrollStep() {
+  const shelf = document.getElementById('l15-shelf');
+  if (l15ScrollDir !== 0) {
+    shelf.scrollLeft += l15ScrollDir * 8;
+    l15UpdateShelfArrows();
+    l15ScrollRaf = requestAnimationFrame(l15ScrollStep);
+  } else {
+    l15ScrollRaf = null;
+  }
+}
+
+function l15StartShelfScroll(dir) {
+  l15ScrollDir = dir;
+  if (!l15ScrollRaf) l15ScrollRaf = requestAnimationFrame(l15ScrollStep);
+}
+
+function l15StopShelfScroll() {
+  l15ScrollDir = 0;
+}
+
+function l15UpdateShelfArrows() {
+  const shelf = document.getElementById('l15-shelf');
+  const atStart = shelf.scrollLeft <= 0;
+  const atEnd = shelf.scrollLeft >= shelf.scrollWidth - shelf.clientWidth - 1;
+  document.getElementById('l15-shelf-arrow-left').style.visibility = atStart ? 'hidden' : 'visible';
+  document.getElementById('l15-shelf-arrow-right').style.visibility = atEnd ? 'hidden' : 'visible';
+}
+
+document.getElementById('l15-shelf-arrow-left').addEventListener('mouseenter', () => l15StartShelfScroll(-1));
+document.getElementById('l15-shelf-arrow-left').addEventListener('mouseleave', l15StopShelfScroll);
+document.getElementById('l15-shelf-arrow-right').addEventListener('mouseenter', () => l15StartShelfScroll(1));
+document.getElementById('l15-shelf-arrow-right').addEventListener('mouseleave', l15StopShelfScroll);
+document.getElementById('l15-shelf').addEventListener('scroll', l15UpdateShelfArrows);
+
+// ---------- Level 1.5: invalid-drop alert ----------
+let l15AlertTimeout = null;
+
+function l15ShowAlert(message) {
+  const el = document.getElementById('l15-alert');
+  el.textContent = message;
+  el.style.display = 'block';
+  clearTimeout(l15AlertTimeout);
+  l15AlertTimeout = setTimeout(() => { el.style.display = 'none'; }, 2400);
+}
+
+// Scans every cell for whether the item could fit somewhere (ignoring
+// where it was actually dropped) — distinguishes "you dropped on an
+// occupied spot, but there's room elsewhere" from "there's nowhere in
+// the whole budget this fits."
+function l15AnyValidPlacement(item, excludeKey) {
+  const { cols, rows } = l15GridDims();
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (l15CanPlace(item, col, row, excludeKey)) return true;
+    }
+  }
+  return false;
+}
 
 // ---------- Level 1.5: show/hide ----------
 // Toggles between the fully separate Level 1.5 screen and the existing
