@@ -888,6 +888,7 @@
       </div>
       <div class="l15-side-col">
         <aside class="l15-sidebar">
+          <div class="l15-hearts-title">Savings Calculator</div>
           <div class="row"><span>Monthly Cost</span><span class="num" id="l15-monthly-cost">$0</span></div>
           <div class="row"><span>Annual Cost</span><span class="num" id="l15-annual-cost">$0</span></div>
           <div class="row grand"><span>Monthly Savings</span><span class="num" id="l15-monthly-savings">$0</span></div>
@@ -895,9 +896,9 @@
         </aside>
         <aside class="l15-sidebar l15-interest-box">
           <div class="l15-hearts-title">Interest Calculator</div>
-          <div class="row"><span>Current Jar Savings</span><span class="num" id="l15-current-jar-savings">$0</span></div>
-          <div class="row"><span>New Jar Savings</span><span class="income-cell">$<input type="number" id="l15-new-jar-savings-input" class="income-input" step="100" aria-label="New Jar Savings"></span></div>
-          <div class="row"><span>Jar Interest Rate</span><span class="income-cell"><input type="number" id="l15-jar-interest-rate-input" class="income-input rate-input" min="0" step="0.5" aria-label="Jar Interest Rate">%</span></div>
+          <div class="row"><span>Savings Last Year</span><span class="num" id="l15-savings-last-year">$0</span></div>
+          <div class="row"><span>Savings This Year</span><span class="income-cell">$<input type="number" id="l15-savings-this-year-input" class="income-input" step="100" aria-label="Savings This Year"></span></div>
+          <div class="row"><span>Interest Rate</span><span class="income-cell"><input type="number" id="l15-interest-rate-input" class="income-input rate-input" min="0" step="0.5" aria-label="Interest Rate">%</span></div>
           <div class="row grand"><span>This year's interest</span><span class="num" id="l15-earned-interest">$0</span></div>
         </aside>
         <aside class="l15-sidebar l15-hearts-box">
@@ -1217,9 +1218,12 @@ const l15State = {
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
   heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
   heartsModifier: 0,
-  currentJarSavings: 0,
-  newJarSavings: 0,
-  jarInterestRate: 0, // player enters e.g. "3" meaning 3% (0.03)
+  savingsLastYear: 0,
+  // null = "not manually set, track live Annual Savings"; once the player
+  // types into Savings This Year it becomes a fixed number and stops
+  // tracking Annual Savings, even if the grid changes afterward.
+  savingsThisYear: null,
+  interestRate: 0, // player enters e.g. "3" meaning 3% (0.03)
 };
 
 // Sum of `hearts` across every placed item (currently only $1000 tiers
@@ -1233,11 +1237,24 @@ function l15CurrentHeartsTotal() {
   return l15State.heartsLastYear + l15HeartsThisYear() + l15State.heartsModifier;
 }
 
+function l15MonthlySavings() {
+  return (l15TotalCells() - l15OccupiedCells()) * L15_CELL_VALUE;
+}
+function l15AnnualSavings() {
+  return l15MonthlySavings() * 12;
+}
+
+// Savings This Year defaults to the Savings Calculator's live Annual
+// Savings until the player manually enters a value (see l15State.savingsThisYear).
+function l15SavingsThisYear() {
+  return l15State.savingsThisYear !== null ? l15State.savingsThisYear : l15AnnualSavings();
+}
+
 // Mirrors Level 1's earnedInterest() — there's no Next Year rollover in
 // Level 1.5 (that section is hidden), so this is just the live "this
-// year's interest" figure, not accumulated into currentJarSavings anywhere.
+// year's interest" figure, not accumulated into savingsLastYear anywhere.
 function l15EarnedInterest() {
-  return (l15State.currentJarSavings + l15State.newJarSavings) * (l15State.jarInterestRate / 100);
+  return (l15State.savingsLastYear + l15SavingsThisYear()) * (l15State.interestRate / 100);
 }
 
 function l15BigSquareCount() {
@@ -1266,9 +1283,9 @@ function l15ResetState() {
   l15State.placed = [];
   l15State.heartsLastYear = 5;
   l15State.heartsModifier = 0;
-  l15State.currentJarSavings = 0;
-  l15State.newJarSavings = 0;
-  l15State.jarInterestRate = 0;
+  l15State.savingsLastYear = 0;
+  l15State.savingsThisYear = null;
+  l15State.interestRate = 0;
 }
 
 function l15ItemByKey(key) {
@@ -2033,21 +2050,19 @@ function renderLevel1_5() {
 
   const monthlyCost = l15State.placed.reduce((sum, p) => sum + l15ItemByKey(p.itemKey).price, 0);
   const annualCost = monthlyCost * 12;
-  const monthlySavings = (l15TotalCells() - l15OccupiedCells()) * L15_CELL_VALUE;
-  const annualSavings = monthlySavings * 12;
   document.getElementById('l15-monthly-cost').textContent = `$${monthlyCost.toLocaleString()}`;
   document.getElementById('l15-annual-cost').textContent = `$${annualCost.toLocaleString()}`;
-  document.getElementById('l15-monthly-savings').textContent = `$${monthlySavings.toLocaleString()}`;
-  document.getElementById('l15-annual-savings').textContent = `$${annualSavings.toLocaleString()}`;
+  document.getElementById('l15-monthly-savings').textContent = `$${l15MonthlySavings().toLocaleString()}`;
+  document.getElementById('l15-annual-savings').textContent = `$${l15AnnualSavings().toLocaleString()}`;
 
-  document.getElementById('l15-current-jar-savings').textContent = `$${Math.round(l15State.currentJarSavings).toLocaleString()}`;
-  const newJarInput = document.getElementById('l15-new-jar-savings-input');
-  if (document.activeElement !== newJarInput) {
-    newJarInput.value = l15State.newJarSavings;
+  document.getElementById('l15-savings-last-year').textContent = `$${Math.round(l15State.savingsLastYear).toLocaleString()}`;
+  const savingsThisYearInput = document.getElementById('l15-savings-this-year-input');
+  if (document.activeElement !== savingsThisYearInput) {
+    savingsThisYearInput.value = Math.round(l15SavingsThisYear());
   }
-  const jarRateInput = document.getElementById('l15-jar-interest-rate-input');
-  if (document.activeElement !== jarRateInput) {
-    jarRateInput.value = l15State.jarInterestRate;
+  const interestRateInput = document.getElementById('l15-interest-rate-input');
+  if (document.activeElement !== interestRateInput) {
+    interestRateInput.value = l15State.interestRate;
   }
   document.getElementById('l15-earned-interest').textContent = `$${Math.round(l15EarnedInterest()).toLocaleString()}`;
 
@@ -2267,13 +2282,13 @@ document.getElementById('l15-hearts-modifier-input').addEventListener('input', (
   renderLevel1_5();
 });
 
-document.getElementById('l15-new-jar-savings-input').addEventListener('input', (e) => {
-  l15State.newJarSavings = Number(e.target.value) || 0;
+document.getElementById('l15-savings-this-year-input').addEventListener('input', (e) => {
+  l15State.savingsThisYear = Number(e.target.value) || 0;
   renderLevel1_5();
 });
 
-document.getElementById('l15-jar-interest-rate-input').addEventListener('input', (e) => {
-  l15State.jarInterestRate = Math.max(0, Number(e.target.value) || 0);
+document.getElementById('l15-interest-rate-input').addEventListener('input', (e) => {
+  l15State.interestRate = Math.max(0, Number(e.target.value) || 0);
   renderLevel1_5();
 });
 

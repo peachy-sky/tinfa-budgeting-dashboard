@@ -191,10 +191,11 @@ Hovering an arrow starts a `requestAnimationFrame` loop
 until the pointer leaves; arrows hide via `l15UpdateShelfArrows` once
 scrolled fully to that edge.
 
-**Sidebar**: Monthly/Annual Cost = sum of placed item prices (× 12);
-Monthly/Annual Savings = `(totalCells − occupiedCells) × 250` (× 12) —
-recomputed on every `renderLevel1_5()` call, i.e. after every successful
-place/remove/move.
+**Savings Calculator** (`.l15-sidebar`, titled via `.l15-hearts-title`):
+Monthly/Annual Cost = sum of placed item prices (× 12); Monthly/Annual
+Savings = `l15MonthlySavings()` (`(totalCells − occupiedCells) × 250`,
+× 12 for annual) — recomputed on every `renderLevel1_5()` call, i.e.
+after every successful place/remove/move.
 
 **Hearts**: every $1,000-tier item carries `hearts: 1` (set in
 `l15MakeTiers`; every other tier is `hearts: 0`) and shows a ❤️ badge
@@ -213,16 +214,30 @@ a separate, Level-1.5-only heart total — it does not read or write
 5/0 in `l15ResetState()` on every level switch, same as the rest of
 `l15State`.
 
-**Interest Calculator**: a third card (`.l15-interest-box`) sits between
-the cost/savings card and the Hearts card, mirroring Level 1's Interest
-Calculator field-for-field: Current Jar Savings (`l15State.currentJarSavings`,
-read-only display), New Jar Savings (`l15State.newJarSavings`, number
-input) and Jar Interest Rate (`l15State.jarInterestRate`, %, clamped ≥ 0
-same as Level 1), combined by `l15EarnedInterest()` — `(current + new) *
-(rate / 100)` — into "This year's interest". Unlike Level 1, there's no
-Next Year button to roll `newJarSavings`/interest into `currentJarSavings`
-(the Year section stays hidden for Level 1.5), so this is a live
-what-if figure only; all three fields reset to 0 in `l15ResetState()`.
+**Interest Calculator**: a second card (`.l15-interest-box`) sits between
+the Savings Calculator and Hearts cards. Same structure as Level 1's
+Interest Calculator but relabeled and wired to the Savings Calculator
+above it rather than a Next Year rollover (there is none — the Year
+section stays hidden for Level 1.5):
+- **Savings Last Year** (`l15State.savingsLastYear`, read-only display,
+  starts at 0) — the Level-1.5 analog of Level 1's "Current Jar Savings".
+- **Savings This Year** (`l15State.savingsThisYear`, number input) — the
+  analog of "New Jar Savings", but with a twist: it *defaults* to the
+  Savings Calculator's live Annual Savings rather than starting at 0.
+  `l15State.savingsThisYear` starts `null`, meaning "not manually set";
+  `l15SavingsThisYear()` returns `l15AnnualSavings()` while it's `null`,
+  so the input visibly tracks Annual Savings as items are placed/removed.
+  The instant the player types into the field (even to re-enter the same
+  number), the `input` listener sets a concrete number and it stops
+  tracking — from then on it holds exactly what the player typed,
+  regardless of further grid changes, until reset.
+- **Interest Rate** (`l15State.interestRate`, %, clamped ≥ 0 same as
+  Level 1).
+- **This year's interest** = `l15EarnedInterest()` =
+  `(savingsLastYear + l15SavingsThisYear()) * (interestRate / 100)`.
+
+All three (`savingsLastYear`, `savingsThisYear` back to `null`,
+`interestRate`) reset in `l15ResetState()` on every level switch.
 
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf
