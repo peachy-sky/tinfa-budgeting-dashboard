@@ -564,7 +564,7 @@
   }
 
   /* ---------- Level 1.5: spatial grid ---------- */
-  #level1-5-section { --l15-cell: 84px; }
+  #level1-5-section { --l15-cell: 42px; }
   .l15-topline {
     font-size: 0.95rem;
     color: var(--ink-muted);
@@ -686,19 +686,26 @@
   }
   .l15-big-square {
     display: grid;
-    grid-template-columns: repeat(2, var(--l15-cell));
-    grid-template-rows: repeat(2, var(--l15-cell));
+    grid-template-columns: repeat(2, auto);
+    grid-template-rows: repeat(2, auto);
     gap: 2px;
     background: rgba(0,0,0,0.12);
     border-radius: 6px;
-    padding: 2px;
+  }
+  .l15-small-square {
+    display: grid;
+    grid-template-columns: repeat(2, var(--l15-cell));
+    grid-template-rows: repeat(2, var(--l15-cell));
+    gap: 1px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px;
   }
   .l15-cell {
     background: rgba(255,255,255,0.14);
-    border-radius: 4px;
+    border-radius: 3px;
     transition: background 0.1s ease, outline-color 0.1s ease;
-    outline: 2px dashed transparent;
-    outline-offset: -2px;
+    outline: 1px dashed transparent;
+    outline-offset: -1px;
   }
   .l15-cell.drag-valid { background: var(--accent-soft); outline-color: var(--accent); }
   .l15-cell.drag-invalid { background: var(--danger-soft); outline-color: var(--danger); }
@@ -828,7 +835,7 @@
   }
 
   @media (max-width: 760px) {
-    #level1-5-section { --l15-cell: 64px; }
+    #level1-5-section { --l15-cell: 32px; }
     .l15-board { flex-direction: column; }
     .l15-side-col { width: 100%; }
     .l15-sidebar { min-width: 0; width: 100%; }
@@ -1166,7 +1173,15 @@ let pendingExpenses = [];
 // Entirely separate system from Level 0/1 above — its own income figure,
 // its own item catalog, its own state. Nothing here reads or writes
 // `state`, `expenses`, `pendingExpenses`, or any EXPENSE_TEMPLATES.
-const L15_CELL_VALUE = 250; // dollars per small square
+// The grid's base unit is the "tiny square" — a small square ($250) is a
+// 2x2 of tiny squares, and a big square ($1000) is a 2x2 of small squares
+// (so 4x4 tiny squares). Everything below (occupancy, drag candidates,
+// item footprints) works in tiny-square units now; existing $250/$500/
+// $1000 items occupy exactly the same visual area as before (their shapes
+// below are exactly double the old small-square shapes), this just opens
+// the door to a future item priced in $62.50 increments that doesn't fill
+// a whole small square.
+const L15_CELL_VALUE = 62.5; // dollars per tiny square
 
 // Single seam every Level 1.5 image path goes through — locally this is
 // just a relative path, but the Artifact publish build swaps this exact
@@ -1175,10 +1190,11 @@ const L15_CELL_VALUE = 250; // dollars per small square
 // rather than building the path inline, or the published copy breaks.
 function l15AssetUri(file) { return 'assets/budgeting-tab/' + file; }
 
-// cells-per-price -> footprint shape. Every current price maps to 1, 2, or
-// 4 cells; a price needing 3 cells (e.g. $750) has no shape defined yet.
-const L15_ITEM_SHAPES = { 1: { w: 1, h: 1 }, 2: { w: 2, h: 1 }, 4: { w: 2, h: 2 } };
-const L15_SPRITE_BY_CELLS = { 1: 'bread1.png', 2: 'bread2.png', 4: 'bread4.png' };
+// cells-per-price -> footprint shape, in tiny-square units. A price
+// needing something other than 4/8/16 cells (e.g. $187.50 -> 3 cells) has
+// no shape defined yet.
+const L15_ITEM_SHAPES = { 4: { w: 2, h: 2 }, 8: { w: 4, h: 2 }, 16: { w: 4, h: 4 } };
+const L15_SPRITE_BY_CELLS = { 4: 'bread1.png', 8: 'bread2.png', 16: 'bread4.png' };
 
 function l15ItemCells(price) { return Math.ceil(price / L15_CELL_VALUE); }
 function l15ItemShape(item) { return L15_ITEM_SHAPES[l15ItemCells(item.price)]; }
@@ -1274,9 +1290,12 @@ function l15BigGridDims() {
   return { cols: n, rows: 1 };
 }
 
+// Total grid size in tiny-square units: each big square is always 2x2
+// small squares which are always 2x2 tiny squares, so 4 tiny cells per
+// axis per big square, regardless of how many big squares there are.
 function l15GridDims() {
   const { cols, rows } = l15BigGridDims();
-  return { cols: cols * 2, rows: rows * 2 };
+  return { cols: cols * 4, rows: rows * 4 };
 }
 
 function l15ResetState() {
@@ -1923,6 +1942,8 @@ function l15CellPx() {
   return parseFloat(getComputedStyle(document.getElementById('level1-5-section')).getPropertyValue('--l15-cell'));
 }
 
+// Three nested levels: tray > .l15-big-square (2x2 of) > .l15-small-square
+// (2x2 of) > .l15-cell (the tiny square, the actual occupancy/drag unit).
 function l15BuildGridDom() {
   const tray = document.getElementById('l15-tray');
   tray.innerHTML = '';
@@ -1932,19 +1953,25 @@ function l15BuildGridDom() {
   for (let i = 0; i < bigCols * bigRows; i++) {
     const big = document.createElement('div');
     big.className = 'l15-big-square';
-    for (let c = 0; c < 4; c++) {
-      const cell = document.createElement('div');
-      cell.className = 'l15-cell';
-      big.appendChild(cell);
+    for (let s = 0; s < 4; s++) {
+      const small = document.createElement('div');
+      small.className = 'l15-small-square';
+      for (let t = 0; t < 4; t++) {
+        const cell = document.createElement('div');
+        cell.className = 'l15-cell';
+        small.appendChild(cell);
+      }
+      big.appendChild(small);
     }
     tray.appendChild(big);
   }
 }
 
-// Shelf icons are sized proportional to their footprint (1x1 / 2x1 / 2x2),
-// same relative shape the item takes up on the grid, just scaled down to
-// fit the belt — a true-to-size preview rather than a uniform icon.
-const L15_SHELF_UNIT = 20;
+// Shelf icons are sized proportional to their footprint (2x2 / 4x2 / 4x4
+// tiny squares), same relative shape the item takes up on the grid, just
+// scaled down to fit the belt — a true-to-size preview rather than a
+// uniform icon.
+const L15_SHELF_UNIT = 10;
 
 // Each category renders as one belt group showing all three of its price
 // tiers side by side — the player drags whichever tier they want directly
@@ -2075,17 +2102,33 @@ function renderLevel1_5() {
   document.getElementById('l15-hearts-total').textContent = l15CurrentHeartsTotal().toLocaleString();
 }
 
-// Positions a placed item over its (col,row), accounting for the tray's
-// own padding and the `gap: 10px` the tray puts between big squares (an
-// item crosses that gap once per big-square boundary it's past).
+// Pixel geometry constants for the three nested grid levels — kept in
+// sync with the matching CSS: .l15-tray's own padding/gap (tray/big), and
+// .l15-big-square's/.l15-small-square's `gap` (small/tiny). No level uses
+// padding beyond the tray's own, so position is pure nested-gap math.
+const L15_TRAY_PAD = 18;
+const L15_BIG_GAP = 10;   // .l15-tray gap, between big squares
+const L15_SMALL_GAP = 2;  // .l15-big-square gap, between small squares
+const L15_TINY_GAP = 1;   // .l15-small-square gap, between tiny squares
+
+// Pixel offset (from the tray's own edge) of tiny-square index `i` along
+// one axis. Each big square is always 2 small squares, each small square
+// always 2 tiny squares, so decomposing i this way holds regardless of
+// how many big squares the grid has overall.
+function l15TinyOffset(i, cellPx) {
+  const big = Math.floor(i / 4);
+  const rem4 = i % 4;
+  const small = Math.floor(rem4 / 2);
+  const rem2 = rem4 % 2;
+  const smallWidth = 2 * cellPx + L15_TINY_GAP;
+  const bigWidth = 2 * smallWidth + L15_SMALL_GAP;
+  return L15_TRAY_PAD + big * (bigWidth + L15_BIG_GAP) + small * (smallWidth + L15_SMALL_GAP) + rem2 * (cellPx + L15_TINY_GAP);
+}
+
+// Positions a placed item over its (col,row) using l15TinyOffset for both axes.
 function l15PositionPlacedItem(el, p, cellPx) {
-  const trayPad = 18;
-  const bigCol = Math.floor(p.col / 2);
-  const bigRow = Math.floor(p.row / 2);
-  const extraX = bigCol * 10;
-  const extraY = bigRow * 10;
-  el.style.left = (trayPad + p.col * cellPx + extraX) + 'px';
-  el.style.top = (trayPad + p.row * cellPx + extraY) + 'px';
+  el.style.left = l15TinyOffset(p.col, cellPx) + 'px';
+  el.style.top = l15TinyOffset(p.row, cellPx) + 'px';
 }
 
 // ---------- Level 1.5: drag-and-drop ----------
@@ -2110,16 +2153,13 @@ function l15ClearCellHighlights() {
   });
 }
 
-// Inverse of l15PositionPlacedItem's pixel formula (trayPad + i*cellPx +
-// floor(i/2)*bigGap): finds the cell index whose top-left pixel is closest
-// to a given tray-local coordinate. A short loop rather than a closed-form
-// inversion since the grid is always tiny (currently 4 cells per axis).
+// Inverse of l15TinyOffset: finds the cell index whose pixel offset is
+// closest to a given tray-local coordinate. A short loop rather than a
+// closed-form inversion since the grid is always tiny (8 cells per axis).
 function l15PixelToCell(localPx, cellPx, cellCount) {
-  const trayPad = 18, bigGap = 10;
   let best = 0, bestDist = Infinity;
   for (let i = 0; i < cellCount; i++) {
-    const pixel = trayPad + i * cellPx + Math.floor(i / 2) * bigGap;
-    const dist = Math.abs(localPx - pixel);
+    const dist = Math.abs(localPx - l15TinyOffset(i, cellPx));
     if (dist < bestDist) { best = i; bestDist = dist; }
   }
   return best;
@@ -2145,18 +2185,18 @@ function l15HighlightCandidate(item, candidate, valid) {
   const shape = l15ItemShape(item);
   const { cols, rows } = l15GridDims();
   const bigCols = l15BigGridDims().cols;
-  const cells = document.querySelectorAll('.l15-cell');
+  const tray = document.getElementById('l15-tray');
   for (let dy = 0; dy < shape.h; dy++) {
     for (let dx = 0; dx < shape.w; dx++) {
       const c = candidate.col + dx;
       const r = candidate.row + dy;
       if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
-      const bigCol = Math.floor(c / 2), bigRow = Math.floor(r / 2);
-      const bigIndex = bigRow * bigCols + bigCol;
-      const localCol = c % 2, localRow = r % 2;
-      const cellIndex = localRow * 2 + localCol;
-      const big = cells[0] ? cells[0].closest('.l15-tray').children[bigIndex] : null;
-      const cell = big ? big.children[cellIndex] : null;
+      const bigIndex = Math.floor(r / 4) * bigCols + Math.floor(c / 4);
+      const smallIndex = Math.floor((r % 4) / 2) * 2 + Math.floor((c % 4) / 2);
+      const tinyIndex = (r % 2) * 2 + (c % 2);
+      const big = tray.children[bigIndex];
+      const small = big ? big.children[smallIndex] : null;
+      const cell = small ? small.children[tinyIndex] : null;
       if (cell) cell.classList.add(valid ? 'drag-valid' : 'drag-invalid');
     }
   }

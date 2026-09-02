@@ -98,16 +98,42 @@ grid cells and must be dragged onto a bounded tray instead of toggled in a
 list. Savings is never placed directly — it's whatever grid space is left
 unused.
 
-**Grid**: `l15State.monthlyIncome` (flat $4,000 for now) determines grid
-size — `l15BigSquareCount() = monthlyIncome / 1000` "big squares" of
-$1,000 each, arranged via `l15BigGridDims()` (solved today only for the
-4-big-square case → 2×2; anything else falls back to a single row and
-logs a warning), each subdivided into a fixed 2×2 of $250 "small squares".
-So $4,000/mo → 4 big squares → 16 total cells. A non-multiple-of-$1000
-income also just logs a console warning (assumed not to happen yet).
-Occupancy (`l15BuildOccupancy`) is tracked as one flat small-cell grid,
-not scoped per big square — an item's footprint can straddle a
-big-square boundary.
+**Grid**: three nested levels, big square ($1,000) → small square ($250)
+→ tiny square ($62.50, `L15_CELL_VALUE`) — the tiny square is the actual
+occupancy/snapping unit everywhere in code (`l15GridDims()`,
+`l15BuildOccupancy`, drag candidates, etc. all work in tiny-square `col`/
+`row`). `l15State.monthlyIncome` (flat $4,000 for now) determines grid
+size — `l15BigSquareCount() = monthlyIncome / 1000` "big squares",
+arranged via `l15BigGridDims()` (solved today only for the 4-big-square
+case → 2×2 big squares; anything else falls back to a single row and
+logs a warning). Each big square is *always* 2×2 small squares which are
+*always* 2×2 tiny squares (that ratio doesn't depend on `l15BigGridDims`),
+so `l15GridDims()` returns `{ cols: bigCols*4, rows: bigRows*4 }` — today
+4 big squares → 8×8 = 64 total tiny cells, still worth $4,000 (64 × $62.50).
+A non-multiple-of-$1000 income also just logs a console warning (assumed
+not to happen yet). Occupancy (`l15BuildOccupancy`) is tracked as one flat
+tiny-cell grid, not scoped per big/small square — an item's footprint can
+straddle any boundary.
+
+DOM mirrors this: `.l15-tray` > `.l15-big-square` (2×2 of) >
+`.l15-small-square` (2×2 of) > `.l15-cell` (the tiny square,
+`l15BuildGridDom`). Placed items are absolutely-positioned overlays (not
+actual grid children, for simpler multi-cell sizing), so their pixel
+position has to replicate the nested-grid math in JS:
+`l15TinyOffset(i, cellPx)` decomposes a tiny-cell index into
+big/small/tiny components and sums each level's own gap
+(`L15_BIG_GAP`/`L15_SMALL_GAP`/`L15_TINY_GAP`, matching `.l15-tray`'s,
+`.l15-big-square`'s, and `.l15-small-square`'s CSS `gap` respectively — no
+level uses `padding`, so the math is pure nested-gap addition).
+`l15PositionPlacedItem` and `l15PixelToCell` (the drag-candidate inverse
+lookup) both go through this one function, so the two stay in sync.
+`--l15-cell` is the tiny-square's pixel size (42px desktop / 32px mobile)
+— since existing $250/$500/$1000 item footprints are exactly double their
+old small-square-unit shapes while `--l15-cell` is exactly half its old
+value, every existing item still renders at the identical pixel size it
+did before tiny squares existed; the finer unit is purely additive,
+opening the door to a future item priced in $62.50 increments that
+doesn't fill a whole small square.
 
 **Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
 "Groceries + Cooking"), not an individual item — `category.items` is the
@@ -134,11 +160,14 @@ category on the grid at once.
 | Education |
 | Pet |
 
-Every category's three items are priced $250 (1 cell, 1×1, bread1.png),
-$500 (2 cells, 2×1, bread2.png), and $1,000 (4 cells, 2×2, bread4.png).
-`cells = Math.ceil(price / 250)`; shape comes from a fixed lookup
-(`L15_ITEM_SHAPES`) keyed by cell count — a price needing 3 cells (e.g.
-$750) has no shape defined yet, and no category currently has one. Each
+Every category's three items are priced $250 (4 tiny cells, 2×2,
+bread1.png), $500 (8 tiny cells, 4×2, bread2.png), and $1,000 (16 tiny
+cells, 4×4, bread4.png) — each exactly filling 1/2/4 old small squares'
+worth of area, just measured in the finer tiny-square unit.
+`cells = Math.ceil(price / 62.5)`; shape comes from a fixed lookup
+(`L15_ITEM_SHAPES`) keyed by cell count — a price needing some other cell
+count (e.g. $187.50 → 3 cells) has no shape defined yet, and no category
+currently has one. Each
 item also carries its own `category` field (unrelated to the belt-slot
 category above — this one is always `null` today), reserved for a future
 Needs/Wants (50/30/20) breakdown pass; no UI reads it yet.
@@ -193,9 +222,11 @@ scrolled fully to that edge.
 
 **Savings Calculator** (`.l15-sidebar`, titled via `.l15-hearts-title`):
 Monthly/Annual Cost = sum of placed item prices (× 12); Monthly/Annual
-Savings = `l15MonthlySavings()` (`(totalCells − occupiedCells) × 250`,
-× 12 for annual) — recomputed on every `renderLevel1_5()` call, i.e.
-after every successful place/remove/move.
+Savings = `l15MonthlySavings()` (`(totalCells − occupiedCells) × 62.5`,
+× 12 for annual — dollar totals are unaffected by the tiny-square unit,
+this is just a finer-grained multiplication of the same numbers) —
+recomputed on every `renderLevel1_5()` call, i.e. after every successful
+place/remove/move.
 
 **Hearts**: every $1,000-tier item carries `hearts: 1` (set in
 `l15MakeTiers`; every other tier is `hearts: 0`) and shows a ❤️ badge
