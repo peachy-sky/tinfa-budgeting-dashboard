@@ -575,8 +575,8 @@
   .l15-shelf {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
+    gap: 10px;
+    align-items: flex-start;
     padding: 14px 16px;
     border-radius: 12px;
     background-image: url('assets/budgeting-tab/belt.png');
@@ -585,28 +585,44 @@
     border: 1px solid var(--rule);
     box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.08);
   }
-  .l15-shelf-item {
+  .l15-shelf-category {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     padding: 8px 10px;
     border-radius: 10px;
-    cursor: grab;
-    touch-action: none;
-    transition: background 0.1s ease, opacity 0.15s ease;
+    background: rgba(255,255,255,0.22);
+    transition: opacity 0.15s ease;
   }
-  .l15-shelf-item:hover { background: rgba(255,255,255,0.35); }
-  .l15-shelf-item:active { cursor: grabbing; }
-  .l15-shelf-item.placed { opacity: 0.28; cursor: default; pointer-events: none; }
-  .l15-shelf-item img { display: block; width: 26px; height: 26px; object-fit: contain; pointer-events: none; }
-  .l15-shelf-item .l15-shelf-item-name {
+  .l15-shelf-category.placed { opacity: 0.28; pointer-events: none; }
+  .l15-shelf-category-name {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--ink);
     text-shadow: 0 1px 2px rgba(255,255,255,0.6);
     text-align: center;
+  }
+  .l15-shelf-tiers { display: flex; align-items: flex-end; gap: 6px; }
+  .l15-shelf-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 5px;
+    border-radius: 8px;
+    cursor: grab;
+    touch-action: none;
+    transition: background 0.1s ease;
+  }
+  .l15-shelf-item:hover { background: rgba(255,255,255,0.4); }
+  .l15-shelf-item:active { cursor: grabbing; }
+  .l15-shelf-item img { display: block; object-fit: contain; pointer-events: none; }
+  .l15-shelf-item .l15-shelf-item-price {
+    font-size: 0.56rem;
+    font-weight: 700;
+    color: var(--ink-muted);
   }
 
   .l15-board {
@@ -1048,33 +1064,42 @@ let pendingExpenses = [];
 // `state`, `expenses`, `pendingExpenses`, or any EXPENSE_TEMPLATES.
 const L15_CELL_VALUE = 250; // dollars per small square
 
-// The shelf is organized by expense category, not individual item — a
-// category is one belt slot, and holds a list of item choices. Only one
-// item exists per category today, but the shape (`items: [...]`) is built
-// for a future picker that lets the player choose among several items
-// within a category before placing it; `l15ActiveItem` is the seam that
-// picker will plug into. `item.category` is carried on each item but
-// unused for now — reserved for a future Needs/Wants (50/30/20) pass.
-const L15_CATEGORIES = [
-  { key: 'dining',      name: 'Dining Out',  items: [{ key: 'dining-default',      price: 250,  category: null, sprite: 'bread1.png' }] },
-  { key: 'groceries',   name: 'Groceries',   items: [{ key: 'groceries-default',   price: 1000, category: null, sprite: 'bread4.png' }] },
-  { key: 'transit',     name: 'Transit',     items: [{ key: 'transit-default',     price: 250,  category: null, sprite: 'bread1.png' }] },
-  { key: 'phone',       name: 'Phone Bill',  items: [{ key: 'phone-default',       price: 250,  category: null, sprite: 'bread1.png' }] },
-  { key: 'healthcare',  name: 'Healthcare',  items: [{ key: 'healthcare-default',  price: 250,  category: null, sprite: 'bread1.png' }] },
-  { key: 'shopping',    name: 'Shopping',    items: [{ key: 'shopping-default',    price: 250,  category: null, sprite: 'bread1.png' }] },
-  { key: 'travel',      name: 'Travel',      items: [{ key: 'travel-default',      price: 500,  category: null, sprite: 'bread2.png' }] },
-];
-
-// Today's placeholder for a future item-picker: the item a category
-// currently offers when dragged from the shelf (its only one, for now).
-function l15ActiveItem(category) { return category.items[0]; }
-
 // cells-per-price -> footprint shape. Every current price maps to 1, 2, or
 // 4 cells; a price needing 3 cells (e.g. $750) has no shape defined yet.
 const L15_ITEM_SHAPES = { 1: { w: 1, h: 1 }, 2: { w: 2, h: 1 }, 4: { w: 2, h: 2 } };
+const L15_SPRITE_BY_CELLS = { 1: 'bread1.png', 2: 'bread2.png', 4: 'bread4.png' };
 
 function l15ItemCells(price) { return Math.ceil(price / L15_CELL_VALUE); }
 function l15ItemShape(item) { return L15_ITEM_SHAPES[l15ItemCells(item.price)]; }
+
+// Builds a category's three price-tier items (every category currently
+// offers the same $250/$500/$1000 spread). `item.category` (Needs/Wants)
+// is carried but unused for now — reserved for a future 50/30/20 pass.
+function l15MakeTiers(categoryKey) {
+  return [250, 500, 1000].map(price => ({
+    key: `${categoryKey}-${price}`,
+    price,
+    category: null,
+    sprite: L15_SPRITE_BY_CELLS[l15ItemCells(price)],
+  }));
+}
+
+// The shelf is organized by expense category, not individual item — a
+// category is one belt slot, and holds a list of item choices (its three
+// price tiers) the player picks from by dragging the specific tier icon
+// they want. `item.category` on each item is unrelated to this and always
+// `null` for now — see l15MakeTiers.
+const L15_CATEGORIES = [
+  { key: 'rent',        name: 'Rent + Utilities',      items: l15MakeTiers('rent') },
+  { key: 'groceries',   name: 'Groceries + Cooking',   items: l15MakeTiers('groceries') },
+  { key: 'dining',      name: 'Dining Out',            items: l15MakeTiers('dining') },
+  { key: 'healthcare',  name: 'Healthcare',            items: l15MakeTiers('healthcare') },
+  { key: 'travel',      name: 'Travel + Experiences',  items: l15MakeTiers('travel') },
+  { key: 'transit',     name: 'Transit + Car',         items: l15MakeTiers('transit') },
+  { key: 'shopping',    name: 'Shopping',              items: l15MakeTiers('shopping') },
+  { key: 'education',   name: 'Education',             items: l15MakeTiers('education') },
+  { key: 'pet',         name: 'Pet',                   items: l15MakeTiers('pet') },
+];
 
 const l15State = {
   monthlyIncome: 4000, // flat for now; grid size is derived from this, not hardcoded
@@ -1763,27 +1788,45 @@ function l15BuildGridDom() {
 // Shelf icons are sized proportional to their footprint (1x1 / 2x1 / 2x2),
 // same relative shape the item takes up on the grid, just scaled down to
 // fit the belt — a true-to-size preview rather than a uniform icon.
-const L15_SHELF_UNIT = 26;
+const L15_SHELF_UNIT = 20;
 
+// Each category renders as one belt group showing all three of its price
+// tiers side by side — the player drags whichever tier they want directly
+// onto the grid. Placing any tier dims the whole group (single-instance
+// per category, not per tier) until it's dragged back out.
 function l15BuildShelfDom() {
   const shelf = document.getElementById('l15-shelf');
   shelf.innerHTML = '';
   L15_CATEGORIES.forEach((category) => {
-    const item = l15ActiveItem(category);
-    const shape = l15ItemShape(item);
-    const el = document.createElement('div');
-    el.className = 'l15-shelf-item';
-    el.dataset.categoryKey = category.key;
-    el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-name">${category.name}</span>`;
-    el.addEventListener('pointerdown', (e) => {
-      if (el.classList.contains('placed')) return;
-      startL15Drag(e, { type: 'shelf', key: item.key });
+    const catEl = document.createElement('div');
+    catEl.className = 'l15-shelf-category';
+    catEl.dataset.categoryKey = category.key;
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'l15-shelf-category-name';
+    nameEl.textContent = category.name;
+    catEl.appendChild(nameEl);
+
+    const tiersEl = document.createElement('div');
+    tiersEl.className = 'l15-shelf-tiers';
+    category.items.forEach((item) => {
+      const shape = l15ItemShape(item);
+      const el = document.createElement('div');
+      el.className = 'l15-shelf-item';
+      el.dataset.itemKey = item.key;
+      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-price">$${item.price}</span>`;
+      el.addEventListener('pointerdown', (e) => {
+        if (catEl.classList.contains('placed')) return;
+        startL15Drag(e, { type: 'shelf', key: item.key });
+      });
+      el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
+      el.addEventListener('mouseleave', l15HideTooltip);
+      el.addEventListener('click', () => l15ShowTooltip(el, category, item));
+      tiersEl.appendChild(el);
+      l15ItemRefs.set(item.key, null); // placed-element ref filled in by renderLevel1_5
     });
-    el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
-    el.addEventListener('mouseleave', l15HideTooltip);
-    el.addEventListener('click', () => l15ShowTooltip(el, category, item));
-    shelf.appendChild(el);
-    l15ItemRefs.set(item.key, null); // placed-element ref filled in by renderLevel1_5
+    catEl.appendChild(tiersEl);
+    shelf.appendChild(catEl);
   });
 }
 
@@ -1808,8 +1851,8 @@ function renderLevel1_5() {
 
   document.getElementById('l15-income').textContent = `$${l15State.monthlyIncome.toLocaleString()}`;
 
-  // Shelf: mark single-instance category slots placed/available.
-  document.querySelectorAll('.l15-shelf-item').forEach((el) => {
+  // Shelf: mark single-instance category groups placed/available.
+  document.querySelectorAll('.l15-shelf-category').forEach((el) => {
     el.classList.toggle('placed', l15IsCategoryPlaced(el.dataset.categoryKey));
   });
 

@@ -110,34 +110,40 @@ not scoped per big square — an item's footprint can straddle a
 big-square boundary.
 
 **Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
-"Groceries"), not an individual item — `category.items` is a list of item
-choices within it. Today every category has exactly one item, but the
-shape anticipates a future picker letting the player choose among several
-items in a category before placing it; `l15ActiveItem(category)` (today
-just `category.items[0]`) is the seam that picker will plug into.
-Single-instance is enforced per *category*: placing any item from a
-category's `items` list dims that whole shelf slot (`l15IsCategoryPlaced`)
-until dragged back out, and the shelf icon is sized true to its item's
-actual footprint (`L15_SHELF_UNIT = 26px` per cell) rather than a uniform
-size, so e.g. Groceries visibly reads bigger than Dining Out on the belt.
+"Groceries + Cooking"), not an individual item — `category.items` is the
+list of item choices within it. Every category currently offers the same
+three price tiers ($250 / $500 / $1,000, built by `l15MakeTiers()`), shown
+side by side on its belt slot with each tier's own icon (sized true to its
+footprint via `L15_SHELF_UNIT = 20px` per cell) and price — the player
+drags whichever specific tier they want straight onto the grid, no
+intermediate picker step. Single-instance is enforced per *category*, not
+per tier: placing any one tier dims the whole group
+(`l15IsCategoryPlaced`, applied to the `.l15-shelf-category` wrapper) until
+that item is dragged back out — you can't have two tiers of the same
+category on the grid at once.
 
-| Category | Item price | Cells | Sprite |
-|---|---|---|---|
-| Dining Out | $250 | 1 (1×1) | bread1.png |
-| Groceries | $1,000 | 4 (2×2) | bread4.png |
-| Transit | $250 | 1 (1×1) | bread1.png |
-| Phone Bill | $250 | 1 (1×1) | bread1.png |
-| Healthcare | $250 | 1 (1×1) | bread1.png |
-| Shopping | $250 | 1 (1×1) | bread1.png |
-| Travel | $500 | 2 (2×1) | bread2.png |
+| Category |
+|---|
+| Rent + Utilities |
+| Groceries + Cooking |
+| Dining Out |
+| Healthcare |
+| Travel + Experiences |
+| Transit + Car |
+| Shopping |
+| Education |
+| Pet |
 
+Every category's three items are priced $250 (1 cell, 1×1, bread1.png),
+$500 (2 cells, 2×1, bread2.png), and $1,000 (4 cells, 2×2, bread4.png).
 `cells = Math.ceil(price / 250)`; shape comes from a fixed lookup
-(`L15_ITEM_SHAPES`) keyed by cell count — a future price needing 3 cells
-(e.g. $750) has no shape defined yet. Each item also carries its own
-`category` field (unrelated to the belt-slot category above — this one is
-always `null` today), reserved for a future Needs/Wants (50/30/20)
-breakdown pass; no UI reads it yet. `l15ItemByKey`/`l15CategoryForItemKey`
-resolve an item or its owning category from a placed entry's `itemKey`.
+(`L15_ITEM_SHAPES`) keyed by cell count — a price needing 3 cells (e.g.
+$750) has no shape defined yet, and no category currently has one. Each
+item also carries its own `category` field (unrelated to the belt-slot
+category above — this one is always `null` today), reserved for a future
+Needs/Wants (50/30/20) breakdown pass; no UI reads it yet.
+`l15ItemByKey`/`l15CategoryForItemKey` resolve an item or its owning
+category from a placed entry's `itemKey`.
 
 **Drag-and-drop** (`startL15Drag`/`l15OnDragMove`/`l15OnDragUp`): the same
 pointer-based pattern as the energy-diamond drag above (floating ghost,
