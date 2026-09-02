@@ -667,6 +667,12 @@
     margin-top: 22px;
     flex-wrap: wrap;
   }
+  .l15-tray-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
   .l15-tray {
     position: relative;
     background-image: url('assets/budgeting-tab/tray.png');
@@ -874,9 +880,11 @@
     <div id="l15-alert"></div>
 
     <div class="l15-board">
-      <div class="l15-tray" id="l15-tray"></div>
-      <div class="l15-trash" id="l15-trash">
-        <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
+      <div class="l15-tray-col">
+        <div class="l15-tray" id="l15-tray"></div>
+        <div class="l15-trash" id="l15-trash">
+          <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
+        </div>
       </div>
       <div class="l15-side-col">
         <aside class="l15-sidebar">

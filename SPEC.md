@@ -156,9 +156,10 @@ makes it non-linear) rather than a single named target. A drop is valid
 only if every covered cell is in-bounds and unoccupied
 (`l15CanPlace`); cells preview green/red (`.drag-valid`/`.drag-invalid`)
 during the drag. Dropping on the shelf or the trash icon (which swaps
-`trash-closed.png` → `trash-open.png` on drag-over, and sits to the right
-of the tray at 384×384px, well oversized relative to the tray, for an
-easy drop target) removes the item;
+`trash-closed.png` → `trash-open.png` on drag-over, and sits directly
+below the tray — `.l15-tray-col` stacks them in one column — at
+384×384px, well oversized relative to the tray, for an easy drop target)
+removes the item;
 dropping on an invalid tray location snaps it back and shows a red alert
 (`l15ShowAlert`, `#l15-alert`) instead of allowing overflow — the grid can
 never exceed 16/16 cells since it represents 100% of income. The alert
