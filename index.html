@@ -599,7 +599,7 @@
   .l15-shelf-item:hover { background: rgba(255,255,255,0.35); }
   .l15-shelf-item:active { cursor: grabbing; }
   .l15-shelf-item.placed { opacity: 0.28; cursor: default; pointer-events: none; }
-  .l15-shelf-item img { display: block; width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+  .l15-shelf-item img { display: block; width: 26px; height: 26px; object-fit: contain; pointer-events: none; }
   .l15-shelf-item .l15-shelf-item-name {
     font-size: 0.62rem;
     font-weight: 700;
@@ -1048,17 +1048,26 @@ let pendingExpenses = [];
 // `state`, `expenses`, `pendingExpenses`, or any EXPENSE_TEMPLATES.
 const L15_CELL_VALUE = 250; // dollars per small square
 
-// `category` is carried but unused — reserved for a future Needs/Wants
-// (50/30/20) breakdown pass, which will read it straight off placed items.
-const L15_SHELF_ITEMS = [
-  { key: 'dining',     name: 'Dining Out',  price: 250,  category: null, sprite: 'bread1.png' },
-  { key: 'groceries',  name: 'Groceries',   price: 1000, category: null, sprite: 'bread4.png' },
-  { key: 'transit',    name: 'Transit',     price: 250,  category: null, sprite: 'bread1.png' },
-  { key: 'phone',      name: 'Phone Bill',  price: 250,  category: null, sprite: 'bread1.png' },
-  { key: 'healthcare', name: 'Healthcare',  price: 250,  category: null, sprite: 'bread1.png' },
-  { key: 'shopping',   name: 'Shopping',    price: 250,  category: null, sprite: 'bread1.png' },
-  { key: 'travel',     name: 'Travel',      price: 500,  category: null, sprite: 'bread2.png' },
+// The shelf is organized by expense category, not individual item — a
+// category is one belt slot, and holds a list of item choices. Only one
+// item exists per category today, but the shape (`items: [...]`) is built
+// for a future picker that lets the player choose among several items
+// within a category before placing it; `l15ActiveItem` is the seam that
+// picker will plug into. `item.category` is carried on each item but
+// unused for now — reserved for a future Needs/Wants (50/30/20) pass.
+const L15_CATEGORIES = [
+  { key: 'dining',      name: 'Dining Out',  items: [{ key: 'dining-default',      price: 250,  category: null, sprite: 'bread1.png' }] },
+  { key: 'groceries',   name: 'Groceries',   items: [{ key: 'groceries-default',   price: 1000, category: null, sprite: 'bread4.png' }] },
+  { key: 'transit',     name: 'Transit',     items: [{ key: 'transit-default',     price: 250,  category: null, sprite: 'bread1.png' }] },
+  { key: 'phone',       name: 'Phone Bill',  items: [{ key: 'phone-default',       price: 250,  category: null, sprite: 'bread1.png' }] },
+  { key: 'healthcare',  name: 'Healthcare',  items: [{ key: 'healthcare-default',  price: 250,  category: null, sprite: 'bread1.png' }] },
+  { key: 'shopping',    name: 'Shopping',    items: [{ key: 'shopping-default',    price: 250,  category: null, sprite: 'bread1.png' }] },
+  { key: 'travel',      name: 'Travel',      items: [{ key: 'travel-default',      price: 500,  category: null, sprite: 'bread2.png' }] },
 ];
+
+// Today's placeholder for a future item-picker: the item a category
+// currently offers when dragged from the shelf (its only one, for now).
+function l15ActiveItem(category) { return category.items[0]; }
 
 // cells-per-price -> footprint shape. Every current price maps to 1, 2, or
 // 4 cells; a price needing 3 cells (e.g. $750) has no shape defined yet.
@@ -1098,9 +1107,24 @@ function l15ResetState() {
   l15State.placed = [];
 }
 
-function l15ItemByKey(key) { return L15_SHELF_ITEMS.find(i => i.key === key); }
+function l15ItemByKey(key) {
+  for (const cat of L15_CATEGORIES) {
+    const found = cat.items.find(i => i.key === key);
+    if (found) return found;
+  }
+  return null;
+}
 
-function l15IsShelfItemPlaced(key) { return l15State.placed.some(p => p.itemKey === key); }
+function l15CategoryForItemKey(key) {
+  return L15_CATEGORIES.find(cat => cat.items.some(i => i.key === key));
+}
+
+// A category's shelf slot is single-instance: placing any item from it
+// dims the whole slot until that item is dragged back out.
+function l15IsCategoryPlaced(categoryKey) {
+  const cat = L15_CATEGORIES.find(c => c.key === categoryKey);
+  return cat.items.some(item => l15State.placed.some(p => p.itemKey === item.key));
+}
 
 // Occupancy grid, excluding one placement (by itemKey) if given — used so
 // a placed item being dragged doesn't collide with its own current cells.
@@ -1736,30 +1760,37 @@ function l15BuildGridDom() {
   }
 }
 
+// Shelf icons are sized proportional to their footprint (1x1 / 2x1 / 2x2),
+// same relative shape the item takes up on the grid, just scaled down to
+// fit the belt — a true-to-size preview rather than a uniform icon.
+const L15_SHELF_UNIT = 26;
+
 function l15BuildShelfDom() {
   const shelf = document.getElementById('l15-shelf');
   shelf.innerHTML = '';
-  L15_SHELF_ITEMS.forEach((item) => {
+  L15_CATEGORIES.forEach((category) => {
+    const item = l15ActiveItem(category);
+    const shape = l15ItemShape(item);
     const el = document.createElement('div');
     el.className = 'l15-shelf-item';
-    el.dataset.itemKey = item.key;
-    el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}"><span class="l15-shelf-item-name">${item.name}</span>`;
+    el.dataset.categoryKey = category.key;
+    el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;"><span class="l15-shelf-item-name">${category.name}</span>`;
     el.addEventListener('pointerdown', (e) => {
       if (el.classList.contains('placed')) return;
       startL15Drag(e, { type: 'shelf', key: item.key });
     });
-    el.addEventListener('mouseenter', () => l15ShowTooltip(el, item));
+    el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
     el.addEventListener('mouseleave', l15HideTooltip);
-    el.addEventListener('click', () => l15ShowTooltip(el, item));
+    el.addEventListener('click', () => l15ShowTooltip(el, category, item));
     shelf.appendChild(el);
     l15ItemRefs.set(item.key, null); // placed-element ref filled in by renderLevel1_5
   });
 }
 
-function l15ShowTooltip(el, item) {
+function l15ShowTooltip(el, category, item) {
   const tip = document.getElementById('l15-tooltip');
   const rect = el.getBoundingClientRect();
-  tip.innerHTML = `${item.name}<span class="l15-tooltip-price">$${item.price}/mo</span>`;
+  tip.innerHTML = `${category.name}<span class="l15-tooltip-price">$${item.price}/mo</span>`;
   tip.style.display = 'block';
   tip.style.left = (rect.left + rect.width / 2) + 'px';
   tip.style.top = (rect.top - 8) + 'px';
@@ -1777,9 +1808,9 @@ function renderLevel1_5() {
 
   document.getElementById('l15-income').textContent = `$${l15State.monthlyIncome.toLocaleString()}`;
 
-  // Shelf: mark single-instance items placed/available.
+  // Shelf: mark single-instance category slots placed/available.
   document.querySelectorAll('.l15-shelf-item').forEach((el) => {
-    el.classList.toggle('placed', l15IsShelfItemPlaced(el.dataset.itemKey));
+    el.classList.toggle('placed', l15IsCategoryPlaced(el.dataset.categoryKey));
   });
 
   // Placed items: build once, position in place (mirrors expenseRowRefs).
@@ -1788,17 +1819,18 @@ function renderLevel1_5() {
   l15State.placed.forEach((p) => {
     seen.add(p.itemKey);
     const item = l15ItemByKey(p.itemKey);
+    const category = l15CategoryForItemKey(p.itemKey);
     const shape = l15ItemShape(item);
     let el = l15ItemRefs.get(p.itemKey);
     if (!el) {
       el = document.createElement('div');
       el.className = 'l15-item';
       el.dataset.itemKey = p.itemKey;
-      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}">`;
+      el.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}">`;
       el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'placed', key: p.itemKey }));
-      el.addEventListener('mouseenter', () => l15ShowTooltip(el, item));
+      el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
       el.addEventListener('mouseleave', l15HideTooltip);
-      el.addEventListener('click', () => l15ShowTooltip(el, item));
+      el.addEventListener('click', () => l15ShowTooltip(el, category, item));
       l15ItemRefs.set(p.itemKey, el);
     }
     if (el.parentElement !== tray) tray.appendChild(el);
@@ -1995,6 +2027,7 @@ function startL15Drag(e, source) {
   e.preventDefault();
   l15DragSource = source;
   const item = l15ItemByKey(source.key);
+  const category = l15CategoryForItemKey(source.key);
   const shape = l15ItemShape(item);
   const cellPx = l15CellPx();
 
@@ -2003,7 +2036,7 @@ function startL15Drag(e, source) {
   l15DragGhost.style.width = (shape.w * cellPx) + 'px';
   l15DragGhost.style.height = (shape.h * cellPx) + 'px';
   l15DragGhost.style.transform = 'translate(-50%, -50%)';
-  l15DragGhost.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${item.name}">`;
+  l15DragGhost.innerHTML = `<img src="assets/budgeting-tab/${item.sprite}" alt="${category.name}">`;
   document.body.appendChild(l15DragGhost);
   l15MoveGhost(e.clientX, e.clientY);
 

@@ -109,10 +109,19 @@ Occupancy (`l15BuildOccupancy`) is tracked as one flat small-cell grid,
 not scoped per big square — an item's footprint can straddle a
 big-square boundary.
 
-**Items** (`L15_SHELF_ITEMS`, single-instance — placing one dims it on the
-shelf until dragged back out):
+**Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
+"Groceries"), not an individual item — `category.items` is a list of item
+choices within it. Today every category has exactly one item, but the
+shape anticipates a future picker letting the player choose among several
+items in a category before placing it; `l15ActiveItem(category)` (today
+just `category.items[0]`) is the seam that picker will plug into.
+Single-instance is enforced per *category*: placing any item from a
+category's `items` list dims that whole shelf slot (`l15IsCategoryPlaced`)
+until dragged back out, and the shelf icon is sized true to its item's
+actual footprint (`L15_SHELF_UNIT = 26px` per cell) rather than a uniform
+size, so e.g. Groceries visibly reads bigger than Dining Out on the belt.
 
-| Item | Price | Cells | Sprite |
+| Category | Item price | Cells | Sprite |
 |---|---|---|---|
 | Dining Out | $250 | 1 (1×1) | bread1.png |
 | Groceries | $1,000 | 4 (2×2) | bread4.png |
@@ -124,9 +133,11 @@ shelf until dragged back out):
 
 `cells = Math.ceil(price / 250)`; shape comes from a fixed lookup
 (`L15_ITEM_SHAPES`) keyed by cell count — a future price needing 3 cells
-(e.g. $750) has no shape defined yet. Each item also carries a `category`
-field, currently always `null` — reserved for a future Needs/Wants
-(50/30/20) breakdown pass; no UI reads it yet.
+(e.g. $750) has no shape defined yet. Each item also carries its own
+`category` field (unrelated to the belt-slot category above — this one is
+always `null` today), reserved for a future Needs/Wants (50/30/20)
+breakdown pass; no UI reads it yet. `l15ItemByKey`/`l15CategoryForItemKey`
+resolve an item or its owning category from a placed entry's `itemKey`.
 
 **Drag-and-drop** (`startL15Drag`/`l15OnDragMove`/`l15OnDragUp`): the same
 pointer-based pattern as the energy-diamond drag above (floating ghost,
