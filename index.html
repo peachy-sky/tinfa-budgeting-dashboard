@@ -942,7 +942,8 @@
   <section id="level1-5-section" style="display:none">
     <div class="l15-topline-row">
       <div class="l15-topline-fields">
-        <div class="l15-topline">Monthly Income: <span class="income-cell">$<input type="number" id="l15-income-input" class="income-input" min="62.5" step="62.5" aria-label="Monthly Income"></span></div>
+        <div class="l15-topline">Annual Income: <span class="income-cell">$<input type="number" id="l15-annual-income-input" class="income-input" min="750" step="750" aria-label="Annual Income"></span></div>
+        <div class="l15-topline">Monthly Income: <span class="num" id="l15-monthly-income-display">$0</span></div>
         <div class="l15-topline">Modifier: <span class="income-cell">$<input type="number" id="l15-income-modifier-input" class="income-input" step="100" aria-label="Income Modifier"></span></div>
       </div>
       <div class="energy-pool-cell l15-energy-drop-target" data-l15-energy-target="pool" id="l15-energy-pool">
@@ -1432,9 +1433,16 @@ const L15_SAVINGS_ITEMS = Array.from(
   })
 );
 
+// Annual Income is the editable field; Monthly Income is always exactly
+// annual/12, a plain display, not independently editable. Stepped/
+// clamped to multiples of $750 (see l15-annual-income-input's handler)
+// so Monthly Income is always an exact multiple of $62.50 (750/12 =
+// 62.5) — the grid always factors evenly, never a fractional cell.
+const L15_ANNUAL_INCOME_STEP = 750;
+
 const l15State = {
   year: 1,
-  monthlyIncome: 1250, // player-editable; grid size (l15GridDims) is derived from this
+  annualIncome: 15000, // player-editable; l15MonthlyIncome()/l15GridDims() derive from this
   incomeModifier: 0, // added straight onto Annual Savings; resets to 0 each Next Year
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
   savingsOnTrash: [], // itemKeys of savings-fruit currently parked on the trash icon (not deleted, not on the grid)
@@ -1468,8 +1476,11 @@ function l15CurrentHeartsTotal() {
 function l15MonthlyCost() {
   return l15State.placed.reduce((sum, p) => sum + l15CurrentCost(p), 0);
 }
+function l15MonthlyIncome() {
+  return l15State.annualIncome / 12;
+}
 function l15MonthlySavings() {
-  return l15State.monthlyIncome - l15MonthlyCost();
+  return l15MonthlyIncome() - l15MonthlyCost();
 }
 function l15AnnualSavings() {
   return l15MonthlySavings() * 12 + l15State.incomeModifier;
@@ -1517,14 +1528,14 @@ function l15CurrentCost(p) {
 // 4x5), which is expected: the grid is allowed to read as an
 // asymmetrical rectangle rather than a tidy square of big squares.
 function l15GridDims() {
-  const cells = Math.max(1, Math.round(l15State.monthlyIncome / L15_CELL_VALUE));
+  const cells = Math.max(1, Math.round(l15MonthlyIncome() / L15_CELL_VALUE));
   const { w, h } = l15FactorSquare(cells); // w <= h always
   return { cols: h, rows: w }; // wider than tall (or square), not the reverse
 }
 
 function l15ResetState() {
   l15State.year = 1;
-  l15State.monthlyIncome = 1250;
+  l15State.annualIncome = 15000;
   l15State.incomeModifier = 0;
   l15State.placed = [];
   l15State.savingsOnTrash = [];
@@ -2298,10 +2309,11 @@ function l15HideTooltip() {
 function renderLevel1_5() {
   const cellPx = l15CellPx();
 
-  const incomeInput = document.getElementById('l15-income-input');
-  if (document.activeElement !== incomeInput) {
-    incomeInput.value = l15State.monthlyIncome;
+  const annualIncomeInput = document.getElementById('l15-annual-income-input');
+  if (document.activeElement !== annualIncomeInput) {
+    annualIncomeInput.value = l15State.annualIncome;
   }
+  document.getElementById('l15-monthly-income-display').textContent = l15Money(l15MonthlyIncome());
   const incomeModifierInput = document.getElementById('l15-income-modifier-input');
   if (document.activeElement !== incomeModifierInput) {
     incomeModifierInput.value = l15State.incomeModifier;
@@ -2764,12 +2776,25 @@ document.getElementById('l15-hearts-modifier-input').addEventListener('input', (
 // Changing income resizes the grid (l15GridDims reads it directly), so
 // any current placements could end up out of bounds or overlapping —
 // simplest and safest is to clear the tray, same as switching levels.
-document.getElementById('l15-income-input').addEventListener('input', (e) => {
-  l15State.monthlyIncome = Math.max(L15_CELL_VALUE, Number(e.target.value) || 0);
+document.getElementById('l15-annual-income-input').addEventListener('input', (e) => {
+  // Rounded to the nearest $750 (not just stepped — a typed value can
+  // skip the input's step) so Monthly Income (annual/12) always lands on
+  // an exact multiple of $62.50 and the grid always factors evenly.
+  const raw = Math.max(L15_ANNUAL_INCOME_STEP, Number(e.target.value) || 0);
+  l15State.annualIncome = Math.round(raw / L15_ANNUAL_INCOME_STEP) * L15_ANNUAL_INCOME_STEP;
   l15State.placed = [];
   l15State.savingsOnTrash = [];
   l15BuildGridDom();
   l15PlacePresetSavings();
+  renderLevel1_5();
+});
+
+// The render's activeElement guard leaves the box showing whatever the
+// player literally typed (e.g. "15100") until it loses focus — otherwise
+// their cursor position would jump around on every keystroke. Once they
+// click away, re-render so the box snaps to what it actually rounded to
+// (e.g. "15000"), rather than silently disagreeing with the real state.
+document.getElementById('l15-annual-income-input').addEventListener('blur', () => {
   renderLevel1_5();
 });
 

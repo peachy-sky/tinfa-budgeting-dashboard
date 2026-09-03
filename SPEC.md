@@ -98,18 +98,36 @@ grid cells and must be dragged onto a bounded tray instead of toggled in a
 list. Savings is never placed directly — it's whatever grid space is left
 unused.
 
-**Grid**: `l15State.monthlyIncome` is player-editable (`#l15-income-input`,
-defaults to **$1,250**) and drives grid size directly — `l15GridDims()`
-converts it to a tiny-square ($62.50, `L15_CELL_VALUE`) cell count
-(`Math.round(income / 62.5)`) and factors that into the closest-to-square
-exact pair via `l15FactorSquare` (the same helper `l15ItemShape` uses for
-item footprints — "N cells, arranged as squarely as possible, no wasted
-space"), then swaps that pair so `cols` is always the larger (or equal)
-side — `l15FactorSquare` itself returns `{ w, h }` with `w <= h`, and
-`l15GridDims()` maps that to `{ cols: h, rows: w }`, landscape or square,
-never portrait. $1,250 → 20 cells → 5×4 (5 cols, 4 rows). Most incomes
-won't factor into a tidy square — that's expected, not a bug: the grid is
-allowed to read as an asymmetrical rectangle. The tiny square is the only grid unit now — there
+**Income**: **Annual Income** is the player-editable field
+(`#l15-annual-income-input`, `l15State.annualIncome`, defaults to
+**$15,000** — matching Level 1's own default pretax income). **Monthly
+Income** is a plain, non-editable display (`#l15-monthly-income-display`,
+`l15MonthlyIncome() = l15State.annualIncome / 12`) — it used to be the
+editable field itself before Annual Income was added in front of it.
+Annual Income is stepped *and* rounded (`L15_ANNUAL_INCOME_STEP = 750`,
+in the input's `input` handler — `step="750"` alone only affects the
+spinner arrows, not free typing, so a directly-typed value is rounded to
+the nearest 750 too) so Monthly Income always lands on an exact multiple
+of $62.50 (750 / 12 = 62.5): the grid always factors evenly, never a
+fractional cell. Because the render's activeElement guard leaves the
+input showing literally whatever the player typed until it loses focus
+(so their cursor doesn't jump mid-edit), a separate `blur` listener
+re-renders on focus-out specifically so the box snaps to the rounded
+value it actually landed on rather than silently disagreeing with
+`l15State.annualIncome` once they click away.
+
+**Grid**: `l15MonthlyIncome()` drives grid size directly —
+`l15GridDims()` converts it to a tiny-square ($62.50, `L15_CELL_VALUE`)
+cell count (`Math.round(monthlyIncome / 62.5)`) and factors that into the
+closest-to-square exact pair via `l15FactorSquare` (the same helper
+`l15ItemShape` uses for item footprints — "N cells, arranged as squarely
+as possible, no wasted space"), then swaps that pair so `cols` is always
+the larger (or equal) side — `l15FactorSquare` itself returns `{ w, h }`
+with `w <= h`, and `l15GridDims()` maps that to `{ cols: h, rows: w }`,
+landscape or square, never portrait. $15,000/yr → $1,250/mo → 20 cells →
+5×4 (5 cols, 4 rows). Most incomes won't factor into a tidy square —
+that's expected, not a bug: the grid is allowed to read as an
+asymmetrical rectangle. The tiny square is the only grid unit now — there
 was an earlier three-level big-square($1,000)/small-square($250)/tiny-
 square nested structure, but that only ever made sense for income fixed
 at a clean multiple of $1,000; once income became editable to arbitrary
@@ -126,9 +144,10 @@ L15_CELL_GAP)`, matching `.l15-tray`'s own CSS `padding`/`gap`.
 lookup) both go through this one function, so the two stay in sync.
 `--l15-cell` is the cell's pixel size (42px desktop / 32px mobile).
 
-Changing income resizes the grid, so any current placements could end up
-out of bounds or overlapping — the income input's `input` handler clears
-`l15State.placed` before rebuilding, the same as switching levels.
+Changing Annual Income resizes the grid, so any current placements could
+end up out of bounds or overlapping — the input's `input` handler clears
+`l15State.placed` (and `savingsOnTrash` — see Preset Savings below)
+before rebuilding, the same as switching levels.
 
 **Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
 "Groceries + Cooking @ Home") — `category.items` is the list of item
