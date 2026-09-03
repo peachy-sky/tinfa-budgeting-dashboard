@@ -392,11 +392,34 @@ more expenses even though the dollar total wouldn't itself object.
 `l15ItemSprite` now checks for an explicit `item.sprite` field before
 falling back to its price-based bread1/bread2 rule, since a savings-fruit
 happens to be priced exactly $62.50 (the same price a bread1.png-sprited
-expense item can have) but needs a different icon regardless. Draggable
-and trashable through the same generic item-drag/drop-to-trash code as
-any other placed item — no special-casing needed there — but once
-trashed a savings-fruit is simply gone (spent instead of saved), not
-re-addable from anywhere, since there's no shelf origin for it to return to.
+expense item can have) but needs a different icon regardless.
+
+Movement is intentionally more restricted than a regular expense item's,
+via `item.isSavings` checks in `l15ApplyDrop`/`l15UpdateDragHighlight`:
+- **The belt is off-limits entirely.** Dropping a savings-fruit on
+  `#l15-shelf` — from the grid or from the trash (below) — is a no-op; it
+  snaps back rather than being removed. The drag-over highlight is
+  suppressed on the shelf while dragging one, so it doesn't even look
+  like a valid target. Regular items behave as before (shelf removes them
+  for good).
+- **The trash *parks* it instead of deleting it.** Dropping a
+  savings-fruit on `#l15-trash` moves its key from `l15State.placed` to
+  `l15State.savingsOnTrash` rather than discarding it — a small icon then
+  sits on the trash can itself (`.l15-trash-parked`, built the same
+  build-once-reuse way as placed items via a second `l15ParkedRefs` map)
+  and stays fully interactive: hoverable for its tooltip, and draggable
+  by a third drag-source type, `{ type: 'trashed', key }`. Dropping a
+  parked fruit onto a valid grid cell un-parks it (removed from
+  `savingsOnTrash`, pushed back into `placed`); dropping it anywhere
+  invalid (including back on the trash, or on the shelf) is a no-op and
+  it simply stays parked. A regular item dropped on the trash is deleted
+  exactly as before — only `isSavings` items get the parking behavior.
+`l15EffectivePrice`/`l15CanChangeEnergy`-style helpers already treated
+any non-`'placed'` source as "use the base item price, no cell to
+exclude," so the new `'trashed'` source type needed no changes there —
+only the `l15ApplyDrop` branch that pushes a source back into `placed`
+gained a case for it. `l15State.savingsOnTrash` resets to `[]` alongside
+`placed` in both `l15ResetState()` and the income input's handler.
 
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf

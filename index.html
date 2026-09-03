@@ -819,6 +819,7 @@
   }
 
   .l15-trash {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -832,6 +833,31 @@
   }
   .l15-trash.drag-over { outline-color: var(--danger); background: var(--danger-soft); }
   .l15-trash img { width: 264px; height: 264px; object-fit: contain; pointer-events: none; }
+
+  /* Savings-fruit "parked" on the trash instead of deleted — sits over
+     the can, still individually draggable back onto the grid. */
+  .l15-trash-parked {
+    position: absolute;
+    bottom: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    width: 200px;
+    pointer-events: none;
+  }
+  .l15-trash-parked-item {
+    width: 34px;
+    height: 34px;
+    cursor: grab;
+    touch-action: none;
+    pointer-events: auto;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+  }
+  .l15-trash-parked-item:active { cursor: grabbing; }
+  .l15-trash-parked-item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 
   #l15-tooltip {
     position: fixed;
@@ -878,6 +904,8 @@
     .l15-sidebar { min-width: 0; width: 100%; }
     .l15-trash { width: 160px; height: 160px; }
     .l15-trash img { width: 110px; height: 110px; }
+    .l15-trash-parked { bottom: 22px; width: 120px; gap: 3px; }
+    .l15-trash-parked-item { width: 22px; height: 22px; }
   }
 </style>
 </head>
@@ -937,6 +965,7 @@
         <div class="l15-tray" id="l15-tray"></div>
         <div class="l15-trash" id="l15-trash">
           <img id="l15-trash-img" src="assets/budgeting-tab/trash-closed.png" alt="Trash">
+          <div class="l15-trash-parked" id="l15-trash-parked"></div>
         </div>
       </div>
       <div class="l15-side-col">
@@ -1400,6 +1429,7 @@ const L15_SAVINGS_ITEMS = Array.from(
     category: null,
     sprite: 'strawb.png',
     note: "Money you've already committed to saving.",
+    isSavings: true,
   })
 );
 
@@ -1408,6 +1438,7 @@ const l15State = {
   monthlyIncome: 1250, // player-editable; grid size (l15GridDims) is derived from this
   incomeModifier: 0, // added straight onto Annual Savings; resets to 0 each Next Year
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
+  savingsOnTrash: [], // itemKeys of savings-fruit currently parked on the trash icon (not deleted, not on the grid)
   heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
   heartsModifier: 0,
   savingsLastYear: 0,
@@ -1497,6 +1528,7 @@ function l15ResetState() {
   l15State.monthlyIncome = 1250;
   l15State.incomeModifier = 0;
   l15State.placed = [];
+  l15State.savingsOnTrash = [];
   l15State.heartsLastYear = 5;
   l15State.heartsModifier = 0;
   l15State.savingsLastYear = 0;
@@ -2169,6 +2201,7 @@ document.getElementById('set-lowest-btn').addEventListener('click', () => {
 
 // ---------- Level 1.5: rendering ----------
 const l15ItemRefs = new Map(); // itemKey -> .l15-item element (built once, moved in place)
+const l15ParkedRefs = new Map(); // itemKey -> .l15-trash-parked-item element, for savings-fruit parked on the trash
 let l15TooltipTarget = null;
 
 function l15CellPx() {
@@ -2334,6 +2367,34 @@ function renderLevel1_5() {
     }
   });
 
+  // Savings-fruit parked on the trash — same build-once-reuse pattern as
+  // placed items, just a much smaller draggable icon with no cell sizing.
+  const trashParked = document.getElementById('l15-trash-parked');
+  const seenParked = new Set();
+  l15State.savingsOnTrash.forEach((itemKey) => {
+    seenParked.add(itemKey);
+    const item = l15ItemByKey(itemKey);
+    let el = l15ParkedRefs.get(itemKey);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'l15-trash-parked-item';
+      el.dataset.itemKey = itemKey;
+      el.innerHTML = l15IconHtml(item);
+      el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'trashed', key: itemKey }));
+      el.addEventListener('mouseenter', () => l15ShowTooltip(el, L15_SAVINGS_CATEGORY, item));
+      el.addEventListener('mouseleave', l15HideTooltip);
+      el.addEventListener('click', () => l15ShowTooltip(el, L15_SAVINGS_CATEGORY, item));
+      l15ParkedRefs.set(itemKey, el);
+    }
+    if (el.parentElement !== trashParked) trashParked.appendChild(el);
+  });
+  l15ParkedRefs.forEach((el, key) => {
+    if (!seenParked.has(key) && el) {
+      el.remove();
+      l15ParkedRefs.set(key, null);
+    }
+  });
+
   const monthlyCost = l15MonthlyCost();
   document.getElementById('l15-monthly-cost').textContent = l15Money(monthlyCost);
   document.getElementById('l15-annual-cost').textContent = l15Money(monthlyCost * 12);
@@ -2471,6 +2532,9 @@ function l15UpdateDragHighlight(clientX, clientY) {
   const el = document.elementFromPoint(clientX, clientY);
   const target = el && el.closest('.l15-trash, .l15-shelf');
   if (target) {
+    // Savings-fruit can never land on the belt, so don't invite it there.
+    const draggedItem = l15ItemByKey(l15DragSource.key);
+    if (target.id === 'l15-shelf' && draggedItem && draggedItem.isSavings) return;
     target.classList.add('drag-over');
     if (target.id === 'l15-trash') l15SetTrashOpen(true);
   }
@@ -2478,12 +2542,18 @@ function l15UpdateDragHighlight(clientX, clientY) {
 
 function l15ApplyDrop(clientX, clientY) {
   const source = l15DragSource;
+  const item = l15ItemByKey(source.key);
+  const isSavings = !!(item && item.isSavings);
 
   if (l15DragCandidate) {
     if (source.type === 'placed') {
       const p = l15State.placed.find(p => p.itemKey === source.key);
       p.col = l15DragCandidate.col;
       p.row = l15DragCandidate.row;
+    } else if (source.type === 'trashed') {
+      // Un-park it: back on the grid, off the trash pile.
+      l15State.savingsOnTrash = l15State.savingsOnTrash.filter(k => k !== source.key);
+      l15State.placed.push({ itemKey: source.key, col: l15DragCandidate.col, row: l15DragCandidate.row, energy: 0 });
     } else {
       l15State.placed.push({ itemKey: source.key, col: l15DragCandidate.col, row: l15DragCandidate.row, energy: 0 });
     }
@@ -2492,11 +2562,28 @@ function l15ApplyDrop(clientX, clientY) {
 
   const el = document.elementFromPoint(clientX, clientY);
   const target = el && el.closest('.l15-trash, .l15-shelf');
-  if (target && source.type === 'placed') {
-    l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
+
+  if (target && target.id === 'l15-trash') {
+    if (source.type === 'placed') {
+      l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
+      // A savings-fruit parks on the trash instead of being deleted —
+      // it can be dragged back onto the grid at any time. Any other
+      // item is gone for good, same as before.
+      if (isSavings) l15State.savingsOnTrash.push(source.key);
+    }
+    // A 'trashed' source dropped back on the trash is already parked: no-op.
     return;
   }
-  if (target) return; // dropped on the shelf/trash from the shelf itself: no-op
+
+  if (target) {
+    // Savings-fruit can never go on the belt — from the grid or from the
+    // trash pile — dropping it there is a no-op (snaps back).
+    if (isSavings) return;
+    if (source.type === 'placed') {
+      l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
+    }
+    return; // dropped on the shelf from the shelf itself: no-op
+  }
 
   const trayRect = document.getElementById('l15-tray').getBoundingClientRect();
   const overTray = clientX >= trayRect.left && clientX <= trayRect.right && clientY >= trayRect.top && clientY <= trayRect.bottom;
@@ -2510,7 +2597,7 @@ function l15ApplyDrop(clientX, clientY) {
   }
   // Dropped outside the tray/trash/shelf entirely: no-op (shelf item never
   // left the shelf; a placed item just snaps back to its existing
-  // position on re-render).
+  // position on re-render; a parked savings-fruit stays parked).
 }
 
 function l15OnDragMove(e) {
@@ -2677,6 +2764,7 @@ document.getElementById('l15-hearts-modifier-input').addEventListener('input', (
 document.getElementById('l15-income-input').addEventListener('input', (e) => {
   l15State.monthlyIncome = Math.max(L15_CELL_VALUE, Number(e.target.value) || 0);
   l15State.placed = [];
+  l15State.savingsOnTrash = [];
   l15BuildGridDom();
   l15PlacePresetSavings();
   renderLevel1_5();
