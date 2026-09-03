@@ -685,24 +685,8 @@
     border-radius: 14px;
     padding: 18px;
     display: inline-grid;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .l15-big-square {
-    display: grid;
-    grid-template-columns: repeat(2, auto);
-    grid-template-rows: repeat(2, auto);
     gap: 2px;
-    background: rgba(0,0,0,0.12);
-    border-radius: 6px;
-  }
-  .l15-small-square {
-    display: grid;
-    grid-template-columns: repeat(2, var(--l15-cell));
-    grid-template-rows: repeat(2, var(--l15-cell));
-    gap: 1px;
-    background: rgba(0,0,0,0.06);
-    border-radius: 4px;
+    flex-shrink: 0;
   }
   .l15-cell {
     background: rgba(255,255,255,0.14);
@@ -914,7 +898,7 @@
 
   <section id="level1-5-section" style="display:none">
     <div class="l15-topline-row">
-      <div class="l15-topline">Monthly Income: <span class="num" id="l15-income">$0</span></div>
+      <div class="l15-topline">Monthly Income: <span class="income-cell">$<input type="number" id="l15-income-input" class="income-input" min="62.5" step="62.5" aria-label="Monthly Income"></span></div>
       <div class="energy-pool-cell l15-energy-drop-target" data-l15-energy-target="pool" id="l15-energy-pool">
         <span class="energy-pool-label"><span class="num"><span id="l15-available-energy">4</span> / <span id="l15-total-energy">4</span></span> available</span>
         <div class="diamonds" id="l15-energy-pool-diamonds"></div>
@@ -1248,18 +1232,22 @@ function l15Money(n) {
 // including the $0 "on parents' healthcare" item.
 function l15ItemCells(price) { return Math.max(1, Math.round(price / L15_CELL_VALUE)); }
 
-// Footprint shape for an arbitrary cell count: the closest-to-square
-// EXACT factor pair (w*h === cells, no wasted/overhanging grid space —
-// the grid's total capacity represents 100% of income, so a shape can't
-// reserve more area than its price actually costs). Takes a dollar price
-// directly (not an item) since a placed item's footprint tracks its
-// *current*, energy-discounted cost, not its base price — see
-// l15EffectivePrice below.
-function l15ItemShape(price) {
-  const cells = l15ItemCells(price);
+// The closest-to-square EXACT factor pair for a cell count (w*h === cells,
+// no wasted/overhanging space) — shared by item footprints (below) and
+// the grid itself (l15GridDims), since both need "N cells, arranged as
+// squarely as possible" and neither should reserve more area than it's
+// actually worth.
+function l15FactorSquare(cells) {
   let w = Math.floor(Math.sqrt(cells));
   while (w > 1 && cells % w !== 0) w--;
   return { w, h: cells / w };
+}
+
+// Footprint shape for an arbitrary price. Takes a dollar price directly
+// (not an item) since a placed item's footprint tracks its *current*,
+// energy-discounted cost, not its base price — see l15EffectivePrice below.
+function l15ItemShape(price) {
+  return l15FactorSquare(l15ItemCells(price));
 }
 
 // The price that should drive a drag source's current footprint: a
@@ -1365,7 +1353,7 @@ const L15_CATEGORIES = [
 ];
 
 const l15State = {
-  monthlyIncome: 4000, // flat for now; grid size is derived from this, not hardcoded
+  monthlyIncome: 1250, // player-editable; grid size (l15GridDims) is derived from this
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
   heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
   heartsModifier: 0,
@@ -1438,32 +1426,21 @@ function l15CurrentCost(p) {
   return item.costs[Math.min(p.energy, item.costs.length - 1)];
 }
 
-function l15BigSquareCount() {
-  const count = l15State.monthlyIncome / 1000;
-  if (!Number.isInteger(count)) {
-    console.warn(`Level 1.5: monthly income $${l15State.monthlyIncome} is not a clean multiple of $1000 — grid sizing assumes it is.`);
-  }
-  return Math.max(1, Math.round(count));
-}
-
-// Arranging N big squares into a rows x cols layout is only solved for the
-// 4-big-square (2x2) case today; anything else falls back to a single row.
-function l15BigGridDims() {
-  const n = l15BigSquareCount();
-  if (n === 4) return { cols: 2, rows: 2 };
-  console.warn(`Level 1.5: no big-square layout defined for ${n} big squares — falling back to a single row.`);
-  return { cols: n, rows: 1 };
-}
-
-// Total grid size in tiny-square units: each big square is always 2x2
-// small squares which are always 2x2 tiny squares, so 4 tiny cells per
-// axis per big square, regardless of how many big squares there are.
+// Total grid size, in tiny ($62.50) cells, arranged as close to square as
+// possible via the same factorization item footprints use — the grid is
+// player-editable income now, not a fixed $4,000, so it has to size
+// itself for *any* amount rather than assuming a clean multiple of
+// $1,000. Most incomes won't factor evenly (e.g. $1,250 → 20 cells →
+// 4x5), which is expected: the grid is allowed to read as an
+// asymmetrical rectangle rather than a tidy square of big squares.
 function l15GridDims() {
-  const { cols, rows } = l15BigGridDims();
-  return { cols: cols * 4, rows: rows * 4 };
+  const cells = Math.max(1, Math.round(l15State.monthlyIncome / L15_CELL_VALUE));
+  const { w, h } = l15FactorSquare(cells);
+  return { cols: w, rows: h };
 }
 
 function l15ResetState() {
+  l15State.monthlyIncome = 1250;
   l15State.placed = [];
   l15State.heartsLastYear = 5;
   l15State.heartsModifier = 0;
@@ -2109,28 +2086,21 @@ function l15CellPx() {
   return parseFloat(getComputedStyle(document.getElementById('level1-5-section')).getPropertyValue('--l15-cell'));
 }
 
-// Three nested levels: tray > .l15-big-square (2x2 of) > .l15-small-square
-// (2x2 of) > .l15-cell (the tiny square, the actual occupancy/drag unit).
+// A flat grid of tiny ($62.50) cells, sized by l15GridDims() — the
+// actual occupancy/drag unit. (Earlier versions nested big-square/
+// small-square groupings inside this for a fixed $4,000 income; income
+// is player-editable now and won't usually factor into anything that
+// nests cleanly, so the grid is just one flat rectangle.)
 function l15BuildGridDom() {
   const tray = document.getElementById('l15-tray');
   tray.innerHTML = '';
-  const { cols: bigCols, rows: bigRows } = l15BigGridDims();
-  tray.style.gridTemplateColumns = `repeat(${bigCols}, auto)`;
-  tray.style.gridTemplateRows = `repeat(${bigRows}, auto)`;
-  for (let i = 0; i < bigCols * bigRows; i++) {
-    const big = document.createElement('div');
-    big.className = 'l15-big-square';
-    for (let s = 0; s < 4; s++) {
-      const small = document.createElement('div');
-      small.className = 'l15-small-square';
-      for (let t = 0; t < 4; t++) {
-        const cell = document.createElement('div');
-        cell.className = 'l15-cell';
-        small.appendChild(cell);
-      }
-      big.appendChild(small);
-    }
-    tray.appendChild(big);
+  const { cols, rows } = l15GridDims();
+  tray.style.gridTemplateColumns = `repeat(${cols}, var(--l15-cell))`;
+  tray.style.gridTemplateRows = `repeat(${rows}, var(--l15-cell))`;
+  for (let i = 0; i < cols * rows; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'l15-cell';
+    tray.appendChild(cell);
   }
 }
 
@@ -2207,7 +2177,10 @@ function l15HideTooltip() {
 function renderLevel1_5() {
   const cellPx = l15CellPx();
 
-  document.getElementById('l15-income').textContent = `$${l15State.monthlyIncome.toLocaleString()}`;
+  const incomeInput = document.getElementById('l15-income-input');
+  if (document.activeElement !== incomeInput) {
+    incomeInput.value = l15State.monthlyIncome;
+  }
 
   // Shelf: mark single-instance category groups placed/available.
   document.querySelectorAll('.l15-shelf-category').forEach((el) => {
@@ -2297,27 +2270,16 @@ function renderLevel1_5() {
   document.getElementById('l15-hearts-total').textContent = l15CurrentHeartsTotal().toLocaleString();
 }
 
-// Pixel geometry constants for the three nested grid levels — kept in
-// sync with the matching CSS: .l15-tray's own padding/gap (tray/big), and
-// .l15-big-square's/.l15-small-square's `gap` (small/tiny). No level uses
-// padding beyond the tray's own, so position is pure nested-gap math.
+// Pixel geometry constants — kept in sync with .l15-tray's own CSS
+// padding/gap. Position is pure uniform-gap math now that the grid is a
+// single flat level (see l15BuildGridDom).
 const L15_TRAY_PAD = 18;
-const L15_BIG_GAP = 10;   // .l15-tray gap, between big squares
-const L15_SMALL_GAP = 2;  // .l15-big-square gap, between small squares
-const L15_TINY_GAP = 1;   // .l15-small-square gap, between tiny squares
+const L15_CELL_GAP = 2; // .l15-tray gap, between cells
 
 // Pixel offset (from the tray's own edge) of tiny-square index `i` along
-// one axis. Each big square is always 2 small squares, each small square
-// always 2 tiny squares, so decomposing i this way holds regardless of
-// how many big squares the grid has overall.
+// one axis.
 function l15TinyOffset(i, cellPx) {
-  const big = Math.floor(i / 4);
-  const rem4 = i % 4;
-  const small = Math.floor(rem4 / 2);
-  const rem2 = rem4 % 2;
-  const smallWidth = 2 * cellPx + L15_TINY_GAP;
-  const bigWidth = 2 * smallWidth + L15_SMALL_GAP;
-  return L15_TRAY_PAD + big * (bigWidth + L15_BIG_GAP) + small * (smallWidth + L15_SMALL_GAP) + rem2 * (cellPx + L15_TINY_GAP);
+  return L15_TRAY_PAD + i * (cellPx + L15_CELL_GAP);
 }
 
 // Positions a placed item over its (col,row) using l15TinyOffset for both axes.
@@ -2377,19 +2339,13 @@ function l15HighlightCandidate(shape, candidate, valid) {
   l15ClearCellHighlights();
   if (!candidate) return;
   const { cols, rows } = l15GridDims();
-  const bigCols = l15BigGridDims().cols;
   const tray = document.getElementById('l15-tray');
   for (let dy = 0; dy < shape.h; dy++) {
     for (let dx = 0; dx < shape.w; dx++) {
       const c = candidate.col + dx;
       const r = candidate.row + dy;
       if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
-      const bigIndex = Math.floor(r / 4) * bigCols + Math.floor(c / 4);
-      const smallIndex = Math.floor((r % 4) / 2) * 2 + Math.floor((c % 4) / 2);
-      const tinyIndex = (r % 2) * 2 + (c % 2);
-      const big = tray.children[bigIndex];
-      const small = big ? big.children[smallIndex] : null;
-      const cell = small ? small.children[tinyIndex] : null;
+      const cell = tray.children[r * cols + c];
       if (cell) cell.classList.add(valid ? 'drag-valid' : 'drag-invalid');
     }
   }
@@ -2618,6 +2574,16 @@ document.getElementById('l15-energy-pool').addEventListener('pointerdown', (e) =
 
 document.getElementById('l15-hearts-modifier-input').addEventListener('input', (e) => {
   l15State.heartsModifier = Number(e.target.value) || 0;
+  renderLevel1_5();
+});
+
+// Changing income resizes the grid (l15GridDims reads it directly), so
+// any current placements could end up out of bounds or overlapping —
+// simplest and safest is to clear the tray, same as switching levels.
+document.getElementById('l15-income-input').addEventListener('input', (e) => {
+  l15State.monthlyIncome = Math.max(L15_CELL_VALUE, Number(e.target.value) || 0);
+  l15State.placed = [];
+  l15BuildGridDom();
   renderLevel1_5();
 });
 

@@ -98,42 +98,34 @@ grid cells and must be dragged onto a bounded tray instead of toggled in a
 list. Savings is never placed directly — it's whatever grid space is left
 unused.
 
-**Grid**: three nested levels, big square ($1,000) → small square ($250)
-→ tiny square ($62.50, `L15_CELL_VALUE`) — the tiny square is the actual
-occupancy/snapping unit everywhere in code (`l15GridDims()`,
-`l15BuildOccupancy`, drag candidates, etc. all work in tiny-square `col`/
-`row`). `l15State.monthlyIncome` (flat $4,000 for now) determines grid
-size — `l15BigSquareCount() = monthlyIncome / 1000` "big squares",
-arranged via `l15BigGridDims()` (solved today only for the 4-big-square
-case → 2×2 big squares; anything else falls back to a single row and
-logs a warning). Each big square is *always* 2×2 small squares which are
-*always* 2×2 tiny squares (that ratio doesn't depend on `l15BigGridDims`),
-so `l15GridDims()` returns `{ cols: bigCols*4, rows: bigRows*4 }` — today
-4 big squares → 8×8 = 64 total tiny cells, still worth $4,000 (64 × $62.50).
-A non-multiple-of-$1000 income also just logs a console warning (assumed
-not to happen yet). Occupancy (`l15BuildOccupancy`) is tracked as one flat
-tiny-cell grid, not scoped per big/small square — an item's footprint can
-straddle any boundary.
+**Grid**: `l15State.monthlyIncome` is player-editable (`#l15-income-input`,
+defaults to **$1,250**) and drives grid size directly — `l15GridDims()`
+converts it to a tiny-square ($62.50, `L15_CELL_VALUE`) cell count
+(`Math.round(income / 62.5)`) and factors that into the closest-to-square
+exact pair via `l15FactorSquare` (the same helper `l15ItemShape` uses for
+item footprints — "N cells, arranged as squarely as possible, no wasted
+space"). $1,250 → 20 cells → 4×5. Most incomes won't factor into a tidy
+square — that's expected, not a bug: the grid is allowed to read as an
+asymmetrical rectangle. The tiny square is the only grid unit now — there
+was an earlier three-level big-square($1,000)/small-square($250)/tiny-
+square nested structure, but that only ever made sense for income fixed
+at a clean multiple of $1,000; once income became editable to arbitrary
+amounts it was replaced with one flat grid (still counting in $62.50
+units under the hood, since item footprints already did).
 
-DOM mirrors this: `.l15-tray` > `.l15-big-square` (2×2 of) >
-`.l15-small-square` (2×2 of) > `.l15-cell` (the tiny square,
-`l15BuildGridDom`). Placed items are absolutely-positioned overlays (not
-actual grid children, for simpler multi-cell sizing), so their pixel
-position has to replicate the nested-grid math in JS:
-`l15TinyOffset(i, cellPx)` decomposes a tiny-cell index into
-big/small/tiny components and sums each level's own gap
-(`L15_BIG_GAP`/`L15_SMALL_GAP`/`L15_TINY_GAP`, matching `.l15-tray`'s,
-`.l15-big-square`'s, and `.l15-small-square`'s CSS `gap` respectively — no
-level uses `padding`, so the math is pure nested-gap addition).
+DOM mirrors this directly: `.l15-tray` > `.l15-cell` (`l15BuildGridDom`,
+a single `<div>` per cell, no intermediate wrapper levels). Placed items
+are absolutely-positioned overlays (not actual grid children, for simpler
+multi-cell sizing), so their pixel position has to replicate the grid's
+CSS in JS: `l15TinyOffset(i, cellPx) = L15_TRAY_PAD + i * (cellPx +
+L15_CELL_GAP)`, matching `.l15-tray`'s own CSS `padding`/`gap`.
 `l15PositionPlacedItem` and `l15PixelToCell` (the drag-candidate inverse
 lookup) both go through this one function, so the two stay in sync.
-`--l15-cell` is the tiny-square's pixel size (42px desktop / 32px mobile)
-— since existing $250/$500/$1000 item footprints are exactly double their
-old small-square-unit shapes while `--l15-cell` is exactly half its old
-value, every existing item still renders at the identical pixel size it
-did before tiny squares existed; the finer unit is purely additive,
-opening the door to a future item priced in $62.50 increments that
-doesn't fill a whole small square.
+`--l15-cell` is the cell's pixel size (42px desktop / 32px mobile).
+
+Changing income resizes the grid, so any current placements could end up
+out of bounds or overlapping — the income input's `input` handler clears
+`l15State.placed` before rebuilding, the same as switching levels.
 
 **Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
 "Groceries + Cooking @ Home") — `category.items` is the list of item
