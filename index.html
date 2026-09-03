@@ -650,6 +650,14 @@
     transition: opacity 0.15s ease;
   }
   .l15-shelf-category.placed { opacity: 0.28; pointer-events: none; }
+  @keyframes l15-glow-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(181, 71, 60, 0.65); }
+    50% { box-shadow: 0 0 16px 5px rgba(181, 71, 60, 0.65); }
+  }
+  .l15-shelf-category.missing-required {
+    outline: 2px solid var(--danger);
+    animation: l15-glow-red 1.1s ease-in-out infinite;
+  }
   .l15-shelf-category-name {
     font-size: 0.62rem;
     font-weight: 700;
@@ -747,7 +755,7 @@
   }
   .l15-drag-ghost img { width: 60%; height: 60%; object-fit: contain; }
 
-  /* Fallback for items whose price isn't $62.50 or $127 (no sprite rule
+  /* Fallback for items whose price isn't $62.50 or $125 (no sprite rule
      defined for it yet) — a plain colored square instead of an icon. */
   .l15-square-icon { background: var(--accent-soft); border: 1.5px solid var(--accent); border-radius: 4px; }
   .l15-item .l15-square-icon, .l15-drag-ghost .l15-square-icon { width: 60%; height: 60%; }
@@ -1279,9 +1287,10 @@ function l15Money(n) {
 }
 
 // Cell count is rounded (not ceil'd) since the source spreadsheet's
-// prices aren't always clean multiples of $62.50 (e.g. $190.50) — this
-// keeps e.g. $127 (nominally "2 tiny squares", off by $2 from $125) at a
-// clean 2 cells rather than rounding up to 3. Always at least 1 cell,
+// prices aren't always clean multiples of $62.50 (e.g. $190.50, or the
+// one remaining $127 groceries tier) — rounding keeps a price like that
+// at the nearest clean cell count instead of always rounding up. Always
+// at least 1 cell,
 // including the $0 "on parents' healthcare" item.
 function l15ItemCells(price) { return Math.max(1, Math.round(price / L15_CELL_VALUE)); }
 
@@ -1321,7 +1330,7 @@ function l15EffectivePrice(source) {
 function l15ItemSprite(item) {
   if (item.sprite) return item.sprite; // explicit override (e.g. savings-fruit)
   if (item.price === 62.5) return 'bread1.png';
-  if (item.price === 127) return 'bread2.png';
+  if (item.price === 125) return 'bread2.png';
   return null;
 }
 
@@ -1364,11 +1373,11 @@ const L15_CATEGORIES = [
     l15Item('rent-2000', 2000, [2000]),
     l15Item('rent-1500', 1500, [1500], -0.25, 'renting w housemates?'),
     l15Item('rent-1000', 1000, [1000], -0.5, 'bad apartment...'),
-    l15Item('rent-127', 127, [127], -0.25, 'living at home...'),
+    l15Item('rent-125', 125, [125], -0.25, 'living at home...'),
   ]),
   l15Category('groceries', 'Groceries + Cooking @ Home', 'NEED', [
     l15Item('groceries-250', 250, [250, 190.5, 127], 0, 'paying my fair share of groceries!'),
-    l15Item('groceries-190', 190.5, [190.5, 127, 62.5], 0, 'paying my fair share of groceries!'),
+    l15Item('groceries-190', 190.5, [190.5, 125, 62.5], 0, 'paying my fair share of groceries!'),
     l15Item('groceries-62-a', 62.5, [62.5, 62.5, 62.5], 0, 'paying my fair share of groceries!'),
     l15Item('groceries-62-b', 62.5, [62.5, 62.5, 62.5], 0, 'mostly snacks, tbh'),
   ]),
@@ -1376,29 +1385,29 @@ const L15_CATEGORIES = [
     l15Item('dining-2000', 2000, [2000, 1750], 1, 'dining out 2.5x a day, plus 1/4 hearts/yr'),
     l15Item('dining-1000', 1000, [1000, 750], 0.5, 'dining out 1x a day'),
     l15Item('dining-250', 250, [250, 190.5], 0.25, 'dining out 2.5x a week'),
-    l15Item('dining-127', 127, [127, 62.5], 0, 'dining out 1x a week'),
+    l15Item('dining-125', 125, [125, 62.5], 0, 'dining out 1x a week'),
   ]),
   l15Category('healthcare', 'Healthcare', 'NEED', [
     l15Item('healthcare-250', 250, [250, 190.5], 0, '0.75x modifier on healthcare costs! Working out feels good! (+1/4 hearts/yr if 1 energy)'),
-    l15Item('healthcare-190', 190.5, [190.5, 127], 0, 'Working out feels good! (+1/4 hearts/yr if 1 energy)'),
-    l15Item('healthcare-127', 127, [127, 62.5], 0, '2x modifier on healthcare costs... Working out feels good! (+1/4 hearts/yr if 1 energy)'),
+    l15Item('healthcare-190', 190.5, [190.5, 125], 0, 'Working out feels good! (+1/4 hearts/yr if 1 energy)'),
+    l15Item('healthcare-125', 125, [125, 62.5], 0, '2x modifier on healthcare costs... Working out feels good! (+1/4 hearts/yr if 1 energy)'),
   ]),
   l15Category('travel', 'Travel + Vacations + Experiences', 'WANT', [
     l15Item('travel-1000', 1000, [1000, 750], 1),
     l15Item('travel-250', 250, [250, 190.5], 0.25),
-    l15Item('travel-127', 127, [127, 62.5]),
+    l15Item('travel-125', 125, [125, 62.5]),
   ]),
   l15Category('transit', 'Transit + Car Maintenance + Gas', 'NEED', [
     l15Item('transit-750', 750, [750], 1, 'dream car! insurance is expensive..'),
     l15Item('transit-500', 500, [500], 0, 'reliable, classic, safe car'),
     l15Item('transit-250', 250, [250], 0, 'cheap car, 2x mod on maintenance :('),
-    l15Item('transit-127', 127, [127], -0.5, 'no car, just bussin~'),
+    l15Item('transit-125', 125, [125], -0.5, 'no car, just bussin~'),
   ]),
   l15Category('shopping', 'Shopping', 'WANT', [
     l15Item('shopping-1000', 1000, [1000, 875], 0.5),
     l15Item('shopping-750', 750, [750, 500], 0.25),
     l15Item('shopping-500', 500, [500, 375]),
-    l15Item('shopping-250', 250, [250, 127], 0, 'still gotta buy SOME things, like toiletries...'),
+    l15Item('shopping-250', 250, [250, 125], 0, 'still gotta buy SOME things, like toiletries...'),
   ]),
   l15Category('education', 'Trade School Education', 'NEED', [
     l15Item('education-500', 500, [500]),
@@ -1432,6 +1441,21 @@ const L15_SAVINGS_ITEMS = Array.from(
     isSavings: true,
   })
 );
+
+// Rent, Healthcare, Transit + Car, and Shopping are hidden in year 1 and
+// revealed one per year after that (in this order) — mirrors Level 1's
+// PENDING_TEMPLATES reveal-over-years mechanic, just for whole categories
+// instead of individual expenses.
+const L15_PENDING_CATEGORIES = ['rent', 'healthcare', 'transit', 'shopping'];
+
+// Categories visible on the belt for the current year: all of
+// L15_CATEGORIES minus whichever L15_PENDING_CATEGORIES haven't been
+// revealed yet. Year 1 reveals none of them (slice(0) = all still
+// hidden); year 2 reveals the first, year 3 the second, and so on.
+function l15VisibleCategories() {
+  const stillHidden = new Set(L15_PENDING_CATEGORIES.slice(l15State.year - 1));
+  return L15_CATEGORIES.filter(cat => !stillHidden.has(cat.key));
+}
 
 // Annual Income is the editable field; Monthly Income is always exactly
 // annual/12, a plain display, not independently editable. Stepped/
@@ -1567,13 +1591,49 @@ function l15PlacePresetSavings() {
   });
 }
 
+// Every category currently on the belt must have at least one item
+// placed before advancing — blocks the year, glows the offending
+// category card(s) red, scrolls the belt to the first one, and scrolls
+// the whole page to the top (the belt is near the top, but Next Year
+// itself lives at the very bottom, so the player wouldn't otherwise see
+// any of this happen).
+function l15ValidateCategoriesBeforeNextYear() {
+  const missing = l15VisibleCategories().filter(cat => !l15IsCategoryPlaced(cat.key));
+  document.querySelectorAll('.l15-shelf-category.missing-required').forEach((el) => {
+    el.classList.remove('missing-required');
+  });
+  if (missing.length === 0) return true;
+
+  missing.forEach((cat) => {
+    const el = document.querySelector(`.l15-shelf-category[data-category-key="${cat.key}"]`);
+    if (el) el.classList.add('missing-required');
+  });
+
+  const shelf = document.getElementById('l15-shelf');
+  const firstEl = document.querySelector(`.l15-shelf-category[data-category-key="${missing[0].key}"]`);
+  if (firstEl) {
+    const shelfRect = shelf.getBoundingClientRect();
+    const elRect = firstEl.getBoundingClientRect();
+    shelf.scrollLeft += (elRect.left - shelfRect.left) - 16;
+    l15UpdateShelfArrows();
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  l15ShowAlert('Make sure to choose an expense from each expense category before moving on!');
+  return false;
+}
+
 // Advances the year counter and clears the two per-year modifiers (income
 // and hearts) — everything else (grid placements, energy, interest
 // fields) intentionally carries over; only these two reset each year.
+// The belt's category roster can also change (see L15_PENDING_CATEGORIES),
+// so the shelf is rebuilt, not just re-rendered.
 function l15NextYear() {
+  if (!l15ValidateCategoriesBeforeNextYear()) return;
   l15State.year++;
   l15State.incomeModifier = 0;
   l15State.heartsModifier = 0;
+  l15BuildShelfDom();
   renderLevel1_5();
 }
 
@@ -2249,7 +2309,7 @@ const L15_SHELF_UNIT = 10;
 function l15BuildShelfDom() {
   const shelf = document.getElementById('l15-shelf');
   shelf.innerHTML = '';
-  L15_CATEGORIES.forEach((category) => {
+  l15VisibleCategories().forEach((category) => {
     const catEl = document.createElement('div');
     catEl.className = 'l15-shelf-category';
     catEl.dataset.categoryKey = category.key;
@@ -2320,9 +2380,14 @@ function renderLevel1_5() {
   }
   document.getElementById('l15-year-count').textContent = l15State.year;
 
-  // Shelf: mark single-instance category groups placed/available.
+  // Shelf: mark single-instance category groups placed/available. A
+  // category that failed the Next Year check (see
+  // l15ValidateCategoriesBeforeNextYear) keeps glowing red until it
+  // actually gets an item, at which point the glow clears here.
   document.querySelectorAll('.l15-shelf-category').forEach((el) => {
-    el.classList.toggle('placed', l15IsCategoryPlaced(el.dataset.categoryKey));
+    const isPlaced = l15IsCategoryPlaced(el.dataset.categoryKey);
+    el.classList.toggle('placed', isPlaced);
+    if (isPlaced) el.classList.remove('missing-required');
   });
 
   // Placed items: build once, position in place (mirrors expenseRowRefs).

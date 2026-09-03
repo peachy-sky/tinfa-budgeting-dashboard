@@ -188,9 +188,16 @@ spreadsheet and was dropped along with it.)
 vary too widely and aren't always round (e.g. $190.50):
 - `l15ItemCells(price) = Math.max(1, Math.round(price / 62.5))` — rounded
   rather than ceil'd, so a price a couple dollars off a clean multiple
-  (e.g. $127 vs. a "true" $125) still lands on a clean cell count (2)
-  instead of rounding up to 3; always at least 1 cell (covers the $0
-  "on parents' healthcare" item).
+  still lands on a clean cell count instead of rounding up past it;
+  always at least 1 cell (covers the $0 "on parents' healthcare" item).
+  Prices are transcribed directly from the CSV, which is the source of
+  truth — most originally-"$127" figures across the sheet were later
+  corrected to $125 (rent, dining, healthcare, travel, transit), and the
+  JS data literal was updated to match; the one exception is Groceries'
+  2-energy tier under its $250 starter, which the CSV genuinely still
+  lists as $127.00 and was left as-is. $127 and $125 both round to the
+  same 2-cell footprint (`round(127/62.5) = round(125/62.5) = 2`), so
+  correcting the price never changes an item's shape/size on the grid.
 - `l15ItemShape(item)` factors that cell count into the closest-to-square
   *exact* pair (`w * h === cells`, via a `while` loop shrinking `w` down
   from `floor(sqrt(cells))` until it divides evenly) — no wasted/
@@ -387,11 +394,40 @@ bottom of the Level 1.5 screen. `l15NextYear()` increments
 `l15State.year` and resets exactly two fields — `incomeModifier` and
 `heartsModifier` — to 0, then re-renders. Everything else (the grid and
 every placed item/energy, Monthly Income itself, the whole Interest
-Calculator) intentionally carries over unchanged; Level 1.5 has no
-pending-expense-reveal system for Next Year to unlock the way Level 1's
-does, so advancing the year is otherwise a no-op beyond clearing those
-two modifiers. `l15State.year` resets to 1 in `l15ResetState()` on every
-level switch, same as the rest of `l15State`.
+Calculator) intentionally carries over unchanged beyond clearing those
+two modifiers and this year's category roster (below). `l15State.year`
+resets to 1 in `l15ResetState()` on every level switch, same as the rest
+of `l15State`.
+
+**Year-based category reveal**: unlike Level 0/1's per-expense pending
+reveal, Level 1.5 hides four whole *categories* at Year 1 —
+`L15_PENDING_CATEGORIES = ['rent', 'healthcare', 'transit', 'shopping']`
+— and reveals one per year starting Year 2, in that fixed order.
+`l15VisibleCategories()` filters `L15_CATEGORIES` down to whichever ones
+aren't still pending (`L15_PENDING_CATEGORIES.slice(l15State.year - 1)` is
+the still-hidden set), and `l15BuildShelfDom()` iterates that instead of
+the raw category list, so the belt only ever shows the categories
+currently unlocked. Year 1 therefore starts with 4 categories (Groceries,
+Dining Out, Travel, Trade School Education); by Year 5 all 8 are visible
+and further Next Year clicks leave the roster unchanged. Since the roster
+can change on Next Year, `l15NextYear()` calls `l15BuildShelfDom()` again
+after incrementing the year (in addition to its normal re-render) to
+rebuild the belt for the newly-revealed category.
+
+**Next Year validation**: advancing requires one item placed from *every*
+currently-visible category first. `l15ValidateCategoriesBeforeNextYear()`
+runs before `l15NextYear()`'s own state changes and blocks them entirely
+if any visible category has nothing placed (`!l15IsCategoryPlaced`):
+it adds a `.missing-required` class (red outline + a `l15-glow-red`
+pulsing keyframe animation) to every offending `.l15-shelf-category`
+wrapper, scrolls the belt so the first offending category is in view,
+scrolls the page to the very top so the belt is actually visible, and
+shows `l15ShowAlert("Make sure to choose an expense from each expense
+category before moving on!")` — then returns `false` so the year does not
+advance. `renderLevel1_5()`'s shelf loop clears `.missing-required` off a
+category the moment it becomes satisfied, so placing the missing item and
+retrying Next Year (which re-validates from scratch, only glowing
+whatever's *still* missing) succeeds normally.
 
 **Preset Savings**: a fixed amount already committed as savings for this
 level (`L15_PRESET_SAVINGS = 375`), shown as individually-movable
