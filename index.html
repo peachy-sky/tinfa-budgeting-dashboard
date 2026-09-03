@@ -1290,6 +1290,7 @@ function l15EffectivePrice(source) {
 // of an `<img>` — see every l15AssetUri(item.sprite) call site, which all
 // branch on this returning null.
 function l15ItemSprite(item) {
+  if (item.sprite) return item.sprite; // explicit override (e.g. savings-fruit)
   if (item.price === 62.5) return 'bread1.png';
   if (item.price === 127) return 'bread2.png';
   return null;
@@ -1375,6 +1376,32 @@ const L15_CATEGORIES = [
     l15Item('education-250', 250, [250]),
   ]),
 ];
+
+// "Preset savings" — a fixed amount already committed as savings for this
+// level, shown as individually-movable $62.50 "savings-fruit" tokens
+// (strawb.png) pre-placed on the grid at load (see l15PlacePresetSavings).
+// Not a category: no shelf slot, no single-instance dimming — once one is
+// dragged to the trash it's simply gone (spent instead of saved), not
+// re-addable. Each carries `costs: [0]` so it never counts toward Monthly
+// Cost — it's not an expense — while still occupying its $62.50 (1-cell)
+// footprint (l15ItemShape falls back to a minimum of 1 cell even for a
+// $0 current cost), physically reserving that grid space the same way an
+// expense would.
+const L15_PRESET_SAVINGS = 375;
+const L15_SAVINGS_UNIT_VALUE = 62.5;
+const L15_SAVINGS_CATEGORY = { key: 'savings', name: 'Preset Savings', type: null };
+const L15_SAVINGS_ITEMS = Array.from(
+  { length: Math.round(L15_PRESET_SAVINGS / L15_SAVINGS_UNIT_VALUE) },
+  (_, i) => ({
+    key: `savings-${i}`,
+    price: L15_SAVINGS_UNIT_VALUE,
+    costs: [0],
+    hearts: 0,
+    category: null,
+    sprite: 'strawb.png',
+    note: "Money you've already committed to saving.",
+  })
+);
 
 const l15State = {
   year: 1,
@@ -1475,6 +1502,27 @@ function l15ResetState() {
   l15State.savingsLastYear = 0;
   l15State.savingsThisYear = null;
   l15State.interestRate = 0;
+  l15PlacePresetSavings();
+}
+
+// Pre-places every savings-fruit at the start of the grid (first fit,
+// row-major) — called whenever l15State.placed is cleared (level reset,
+// income change) so the preset savings are always there by default.
+// Skips any that don't fit, rather than erroring, if the grid is smaller
+// than the preset total (only realistic for a very small manual income).
+function l15PlacePresetSavings() {
+  const { cols, rows } = l15GridDims();
+  const shape = l15ItemShape(L15_SAVINGS_UNIT_VALUE);
+  L15_SAVINGS_ITEMS.forEach((item) => {
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (l15CanPlace(shape, col, row, null)) {
+          l15State.placed.push({ itemKey: item.key, col, row, energy: 0 });
+          return;
+        }
+      }
+    }
+  });
 }
 
 // Advances the year counter and clears the two per-year modifiers (income
@@ -1492,11 +1540,14 @@ function l15ItemByKey(key) {
     const found = cat.items.find(i => i.key === key);
     if (found) return found;
   }
-  return null;
+  return L15_SAVINGS_ITEMS.find(i => i.key === key) || null;
 }
 
 function l15CategoryForItemKey(key) {
-  return L15_CATEGORIES.find(cat => cat.items.some(i => i.key === key));
+  const cat = L15_CATEGORIES.find(cat => cat.items.some(i => i.key === key));
+  if (cat) return cat;
+  if (L15_SAVINGS_ITEMS.some(i => i.key === key)) return L15_SAVINGS_CATEGORY;
+  return null;
 }
 
 // A category's shelf slot is single-instance: placing any item from it
@@ -2627,6 +2678,7 @@ document.getElementById('l15-income-input').addEventListener('input', (e) => {
   l15State.monthlyIncome = Math.max(L15_CELL_VALUE, Number(e.target.value) || 0);
   l15State.placed = [];
   l15BuildGridDom();
+  l15PlacePresetSavings();
   renderLevel1_5();
 });
 

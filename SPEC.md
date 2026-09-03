@@ -371,10 +371,38 @@ does, so advancing the year is otherwise a no-op beyond clearing those
 two modifiers. `l15State.year` resets to 1 in `l15ResetState()` on every
 level switch, same as the rest of `l15State`.
 
+**Preset Savings**: a fixed amount already committed as savings for this
+level (`L15_PRESET_SAVINGS = 375`), shown as individually-movable
+$62.50 "savings-fruit" tokens (`strawb.png`, `L15_SAVINGS_ITEMS` — 6 of
+them, `Math.round(375 / 62.5)`) pre-placed on the grid whenever
+`l15State.placed` is cleared (`l15PlacePresetSavings()`, called from both
+`l15ResetState()` and the income input's handler — first-fit, row-major,
+skipping any that don't fit if a manually-entered income leaves too small
+a grid). Not a category: no shelf slot, no `l15IsCategoryPlaced`
+dimming — `l15ItemByKey`/`l15CategoryForItemKey` check `L15_SAVINGS_ITEMS`
+as a fallback after `L15_CATEGORIES` (a small synthetic
+`L15_SAVINGS_CATEGORY` object stands in for the tooltip's category name).
+Each carries `costs: [0]`, so `l15CurrentCost(p)` — and therefore Monthly
+Cost — is always 0 for a savings-fruit; it isn't an expense. Its
+footprint still falls out to 1 cell regardless (`l15ItemShape`'s
+minimum-1-cell floor), so it physically occupies real grid space the same
+as an expense would, without touching the cost/savings arithmetic — the
+point being a player can't spatially paper over committed savings with
+more expenses even though the dollar total wouldn't itself object.
+`l15ItemSprite` now checks for an explicit `item.sprite` field before
+falling back to its price-based bread1/bread2 rule, since a savings-fruit
+happens to be priced exactly $62.50 (the same price a bread1.png-sprited
+expense item can have) but needs a different icon regardless. Draggable
+and trashable through the same generic item-drag/drop-to-trash code as
+any other placed item — no special-casing needed there — but once
+trashed a savings-fruit is simply gone (spent instead of saved), not
+re-addable from anywhere, since there's no shelf origin for it to return to.
+
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf
 background), `tray.png` (grid background), `bread1/2/4.png` (item
-sprites), `trash-closed.png`/`trash-open.png` (trash icon).
+sprites), `strawb.png` (savings-fruit sprite), `trash-closed.png`/
+`trash-open.png` (trash icon).
 
 ## Sections
 
