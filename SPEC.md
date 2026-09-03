@@ -104,9 +104,12 @@ converts it to a tiny-square ($62.50, `L15_CELL_VALUE`) cell count
 (`Math.round(income / 62.5)`) and factors that into the closest-to-square
 exact pair via `l15FactorSquare` (the same helper `l15ItemShape` uses for
 item footprints — "N cells, arranged as squarely as possible, no wasted
-space"). $1,250 → 20 cells → 4×5. Most incomes won't factor into a tidy
-square — that's expected, not a bug: the grid is allowed to read as an
-asymmetrical rectangle. The tiny square is the only grid unit now — there
+space"), then swaps that pair so `cols` is always the larger (or equal)
+side — `l15FactorSquare` itself returns `{ w, h }` with `w <= h`, and
+`l15GridDims()` maps that to `{ cols: h, rows: w }`, landscape or square,
+never portrait. $1,250 → 20 cells → 5×4 (5 cols, 4 rows). Most incomes
+won't factor into a tidy square — that's expected, not a bug: the grid is
+allowed to read as an asymmetrical rectangle. The tiny square is the only grid unit now — there
 was an earlier three-level big-square($1,000)/small-square($250)/tiny-
 square nested structure, but that only ever made sense for income fixed
 at a clean multiple of $1,000; once income became editable to arbitrary

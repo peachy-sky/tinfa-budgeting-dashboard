@@ -1518,8 +1518,8 @@ function l15CurrentCost(p) {
 // asymmetrical rectangle rather than a tidy square of big squares.
 function l15GridDims() {
   const cells = Math.max(1, Math.round(l15State.monthlyIncome / L15_CELL_VALUE));
-  const { w, h } = l15FactorSquare(cells);
-  return { cols: w, rows: h };
+  const { w, h } = l15FactorSquare(cells); // w <= h always
+  return { cols: h, rows: w }; // wider than tall (or square), not the reverse
 }
 
 function l15ResetState() {
