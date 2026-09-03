@@ -841,11 +841,10 @@
     bottom: 54px;
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(3, 34px); /* exactly 3 per row, then wraps */
     gap: 6px;
-    width: 200px;
+    justify-items: center;
     pointer-events: none;
   }
   .l15-trash-parked-item {
@@ -904,7 +903,7 @@
     .l15-sidebar { min-width: 0; width: 100%; }
     .l15-trash { width: 160px; height: 160px; }
     .l15-trash img { width: 110px; height: 110px; }
-    .l15-trash-parked { bottom: 22px; width: 120px; gap: 3px; }
+    .l15-trash-parked { bottom: 22px; grid-template-columns: repeat(3, 22px); gap: 3px; }
     .l15-trash-parked-item { width: 22px; height: 22px; }
   }
 </style>
@@ -2577,8 +2576,12 @@ function l15ApplyDrop(clientX, clientY) {
 
   if (target) {
     // Savings-fruit can never go on the belt — from the grid or from the
-    // trash pile — dropping it there is a no-op (snaps back).
-    if (isSavings) return;
+    // trash pile — dropping it there is a no-op (snaps back) plus a
+    // warning explaining why, rather than silently doing nothing.
+    if (isSavings) {
+      l15ShowAlert('Pre-planned savings must stay in your budget OR be moved to the trash!');
+      return;
+    }
     if (source.type === 'placed') {
       l15State.placed = l15State.placed.filter(p => p.itemKey !== source.key);
     }

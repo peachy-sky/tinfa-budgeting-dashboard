@@ -398,22 +398,29 @@ Movement is intentionally more restricted than a regular expense item's,
 via `item.isSavings` checks in `l15ApplyDrop`/`l15UpdateDragHighlight`:
 - **The belt is off-limits entirely.** Dropping a savings-fruit on
   `#l15-shelf` — from the grid or from the trash (below) — is a no-op; it
-  snaps back rather than being removed. The drag-over highlight is
-  suppressed on the shelf while dragging one, so it doesn't even look
-  like a valid target. Regular items behave as before (shelf removes them
-  for good).
+  snaps back rather than being removed, and shows a red alert
+  ("Pre-planned savings must stay in your budget OR be moved to the
+  trash!", `l15ShowAlert`) explaining why, same alert banner the
+  invalid-placement warnings use. The drag-over highlight is suppressed
+  on the shelf while dragging one, so it doesn't even look like a valid
+  target. Regular items behave as before (shelf removes them for good,
+  no alert).
 - **The trash *parks* it instead of deleting it.** Dropping a
   savings-fruit on `#l15-trash` moves its key from `l15State.placed` to
   `l15State.savingsOnTrash` rather than discarding it — a small icon then
   sits on the trash can itself (`.l15-trash-parked`, built the same
   build-once-reuse way as placed items via a second `l15ParkedRefs` map)
   and stays fully interactive: hoverable for its tooltip, and draggable
-  by a third drag-source type, `{ type: 'trashed', key }`. Dropping a
-  parked fruit onto a valid grid cell un-parks it (removed from
-  `savingsOnTrash`, pushed back into `placed`); dropping it anywhere
-  invalid (including back on the trash, or on the shelf) is a no-op and
-  it simply stays parked. A regular item dropped on the trash is deleted
-  exactly as before — only `isSavings` items get the parking behavior.
+  by a third drag-source type, `{ type: 'trashed', key }`. `.l15-trash-parked`
+  is a CSS grid pinned to exactly 3 columns (`grid-template-columns:
+  repeat(3, 34px)`, 22px on mobile) rather than a flex-wrap row, so a 4th+
+  parked fruit always starts a new row instead of however many happen to
+  fit the container width. Dropping a parked fruit onto a valid grid cell
+  un-parks it (removed from `savingsOnTrash`, pushed back into `placed`);
+  dropping it anywhere invalid (including back on the trash, or on the
+  shelf, which still shows the same alert) is a no-op and it simply stays
+  parked. A regular item dropped on the trash is deleted exactly as
+  before — only `isSavings` items get the parking behavior.
 `l15EffectivePrice`/`l15CanChangeEnergy`-style helpers already treated
 any non-`'placed'` source as "use the base item price, no cell to
 exclude," so the new `'trashed'` source type needed no changes there —
