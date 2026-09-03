@@ -2125,7 +2125,11 @@ function l15BuildShelfDom() {
 
     const tiersEl = document.createElement('div');
     tiersEl.className = 'l15-shelf-tiers';
-    category.items.forEach((item) => {
+    // Displayed lowest-to-highest cost regardless of the source
+    // spreadsheet's row order (a copy — category.items itself keeps its
+    // original transcription order).
+    const sortedItems = [...category.items].sort((a, b) => a.price - b.price);
+    sortedItems.forEach((item) => {
       const shape = l15ItemShape(item);
       const el = document.createElement('div');
       el.className = 'l15-shelf-item';

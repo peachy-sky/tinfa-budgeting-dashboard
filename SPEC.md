@@ -142,9 +142,11 @@ choices within it, transcribed directly from
 the `l15Item(key, price, costs, hearts, note)` / `l15Category(key, name,
 type, items)` helpers, not generated). Unlike the earlier flat $250/$500/
 $1,000-per-category version, item counts and prices now vary per
-category (2–5 items each, 30 total), shown side by side on the belt with
-each item's own icon and price — the player drags whichever specific item
-they want straight onto the grid. Single-instance is enforced per
+category (2–5 items each, 30 total), shown side by side on the belt —
+sorted lowest-to-highest cost (`l15BuildShelfDom` sorts a copy per
+category for display; `category.items` itself keeps the spreadsheet's
+original row order) — with each item's own icon and price. The player
+drags whichever specific item they want straight onto the grid. Single-instance is enforced per
 *category*, not per item: placing any one item dims the whole group
 (`l15IsCategoryPlaced`, applied to the `.l15-shelf-category` wrapper)
 until it's dragged back out — you can't have two items of the same
