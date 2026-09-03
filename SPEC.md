@@ -142,7 +142,9 @@ choices within it, transcribed directly from
 the `l15Item(key, price, costs, hearts, note)` / `l15Category(key, name,
 type, items)` helpers, not generated). Unlike the earlier flat $250/$500/
 $1,000-per-category version, item counts and prices now vary per
-category (2–5 items each, 30 total), shown side by side on the belt —
+category (2–5 items each, 29 total — Healthcare's original $0 "on
+parents' healthcare" item was removed, since a free placeable item was
+more confusing than useful), shown side by side on the belt —
 sorted lowest-to-highest cost (`l15BuildShelfDom` sorts a copy per
 category for display; `category.items` itself keeps the spreadsheet's
 original row order) — with each item's own icon and price. The player
@@ -159,7 +161,7 @@ reserved for a future 50/30/20 breakdown pass; no UI reads it yet.
 | Rent + Utilities | NEED | 5 |
 | Groceries + Cooking @ Home | NEED | 4 |
 | Dining Out | WANT | 4 |
-| Healthcare | NEED | 4 |
+| Healthcare | NEED | 3 |
 | Travel + Vacations + Experiences | WANT | 3 |
 | Transit + Car Maintenance + Gas | NEED | 4 |
 | Shopping | WANT | 4 |
@@ -254,10 +256,21 @@ array is indexed by energy spent (`costs[0]` = base price = 0 energy;
 `costs[1]`, `costs[2]`, ... are progressively cheaper) — a shorter array
 (Rent, Transit, Trade School Education items all have length 1) means
 that item doesn't accept energy at all (`l15MaxEnergyForItem(item) =
-item.costs.length - 1` is 0). Applying energy doesn't touch the item's
-footprint or `price` (which still drives its grid shape/sprite/badge) —
-only `l15CurrentCost(p)`, which is what actually counts toward Monthly
-Cost.
+item.costs.length - 1` is 0).
+
+Applying energy visibly **shrinks the item to match** its new,
+discounted cost — `l15ItemShape` takes a dollar amount directly (not an
+item) precisely so a placed entry's footprint can be recomputed from
+`l15CurrentCost(p)` instead of its base `price` (`l15EffectivePrice(source)`
+picks the right one for whichever drag is in progress — current cost for
+a `'placed'` source, base price for a `'shelf'` one). The item's top-left
+`col`/`row` anchor stays fixed; it shrinks toward its own bottom-right
+corner as cost drops. Since this can free up cells, `l15BuildOccupancy`
+also reads each placed entry's *current* cost. Removing energy (cost goes
+back up, item grows back) is validated the same way placement is
+(`l15CanChangeEnergy`, excluding the item's own current cells) and
+silently refused if something else has since been placed into the space
+it would need to grow back into.
 
 Per the explicit request, energy is applied by dragging a diamond
 *directly onto a placed item* (not a picker or a slider) — the same
@@ -267,41 +280,45 @@ abstraction: `l15StartEnergyDrag`/`l15OnEnergyDragMove`/
 `l15OnEnergyDragUp`/`l15ApplyEnergyDrop`/`l15UpdateEnergyDropHighlight`),
 reusing `renderDiamonds()` and `findGrabbableDiamond()` directly since
 those two are already fully generic. Every placed item with
-`maxEnergy > 0` shows its own small diamond row stuck to its bottom edge
-(`.l15-item-diamonds`, filled up to `p.energy` — rebuilt in place each
-render rather than the whole item, since only the diamonds actually
-change); items with `maxEnergy === 0` show no diamonds at all. Drop
-targets are marked `.l15-energy-drop-target` + `data-l15-energy-target`
-on the pool and on every placed `.l15-item` (the *whole* item card, not
-just its diamond row, so dropping anywhere on it counts — grabbing an
-*existing* diamond back off an item is the tighter target, resolved via
-`findGrabbableDiamond` inside the single pointerdown handler on `.l15-item`,
-which branches between starting an energy-drag (near a filled diamond) or
-the normal item-move drag (anywhere else) rather than using two competing
-listeners). Pool ↔ item and item ↔ item moves both work, mirroring Level
-0/1's `applyEnergyDrop` semantics exactly, just against `l15State.placed`
-entries instead of `expenses`.
+`maxEnergy > 0` shows a small diamond row (`.l15-item-diamonds`, filled up
+to `p.energy` — rebuilt in place each render rather than the whole item)
+sharing one badge cluster (`.l15-item-badges`) with its ❤️ badge in the
+item's top-right corner — items with `maxEnergy === 0` show no diamonds
+at all. Drop targets are marked `.l15-energy-drop-target` +
+`data-l15-energy-target` on the pool and on every placed `.l15-item` (the
+*whole* item card, not just its diamond row, so dropping anywhere on it
+counts — grabbing an *existing* diamond back off an item is the tighter
+target, resolved via `findGrabbableDiamond` inside the single pointerdown
+handler on `.l15-item`, which branches between starting an energy-drag
+(near a filled diamond) or the normal item-move drag (anywhere else)
+rather than using two competing listeners). Pool ↔ item and item ↔ item
+moves both work, mirroring Level 0/1's `applyEnergyDrop` semantics
+exactly, just against `l15State.placed` entries instead of `expenses`.
 
 **Savings Calculator** (`.l15-sidebar`, titled via `.l15-hearts-title`):
-Monthly Cost = sum of each placed item's *current* cost
-(`l15CurrentCost(p)` — the energy-discounted figure, not the base
-`price`; see Energy below) × 12 for annual. Monthly/Annual Savings =
-`l15MonthlySavings()` (`(totalCells − occupiedCells) × 62.5`, × 12 for
-annual) deliberately stays purely grid-space-based — the puzzle's core
-mechanic since Level 1.5 shipped — and does *not* factor in energy
-discounts, since energy reduces what an item costs without shrinking its
-footprint. This means Cost + Savings can diverge from a strict
-income-equals-cost-plus-savings identity once energy is in play; that gap
-is real "found" savings from playing efficiently, intentionally not
-reconciled away. Recomputed on every `renderLevel1_5()` call.
+Monthly Cost (`l15MonthlyCost()`) = sum of each placed item's *current*
+cost (`l15CurrentCost(p)`); Annual Cost = × 12. Monthly Savings
+(`l15MonthlySavings()`) = `monthlyIncome − l15MonthlyCost()` — **exact
+dollar arithmetic, not grid-cell counting**. An earlier version computed
+savings from leftover grid cells (`(totalCells − occupiedCells) × 62.5`)
+instead; that was a real bug, reported directly from play-testing: cell
+footprints are rounded to the nearest $62.50 (`l15ItemCells`), so with
+several items placed their accumulated rounding could make the grid read
+as completely full (0 cells left) while the actual cost total was
+several dollars under income, showing $0 savings when real money was
+still unspent. `l15TotalCells`/`l15OccupiedCells` still exist for grid
+occupancy/placement purposes (`l15BuildOccupancy` etc.) — they're just no
+longer what Savings is computed from.
 
 **Hearts**: each item carries its own `hearts` value straight from the
 spreadsheet's HEARTS column (fractions like "1/4+"/"1/2-" pre-converted
 to signed decimals when transcribed — e.g. `dining-2000` is `hearts: 1`,
 `transit-127` is `hearts: -0.5`; most items are 0). A positive-hearts item
-shows a ❤️ badge (`.l15-heart-badge`, absolutely positioned over the icon)
-on the shelf, the drag ghost, and once placed — negative/zero-hearts
-items show no badge but still count toward the total. A second card
+shows a ❤️ badge on the shelf and the drag ghost (`.l15-heart-badge`,
+absolutely positioned over the icon there) and, once placed, inside the
+`.l15-item-badges` corner cluster alongside any energy diamonds —
+negative/zero-hearts items show no badge but still count toward the
+total. A second card
 (`.l15-hearts-box`, same `.l15-sidebar` styling) sits directly under the
 cost/savings card on the right, mirroring Level 1's Hearts section:
 `l15State.heartsLastYear` (starts at 5, matching Level 1's
