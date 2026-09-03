@@ -573,6 +573,22 @@
     flex-wrap: wrap;
     margin-bottom: 18px;
   }
+  .l15-year-section {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 2px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .l15-topline-fields {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
   .l15-topline { font-size: 0.95rem; color: var(--ink-muted); }
   .l15-topline .num { color: var(--ink); font-weight: 700; }
 
@@ -898,7 +914,10 @@
 
   <section id="level1-5-section" style="display:none">
     <div class="l15-topline-row">
-      <div class="l15-topline">Monthly Income: <span class="income-cell">$<input type="number" id="l15-income-input" class="income-input" min="62.5" step="62.5" aria-label="Monthly Income"></span></div>
+      <div class="l15-topline-fields">
+        <div class="l15-topline">Monthly Income: <span class="income-cell">$<input type="number" id="l15-income-input" class="income-input" min="62.5" step="62.5" aria-label="Monthly Income"></span></div>
+        <div class="l15-topline">Modifier: <span class="income-cell">$<input type="number" id="l15-income-modifier-input" class="income-input" step="100" aria-label="Income Modifier"></span></div>
+      </div>
       <div class="energy-pool-cell l15-energy-drop-target" data-l15-energy-target="pool" id="l15-energy-pool">
         <span class="energy-pool-label"><span class="num"><span id="l15-available-energy">4</span> / <span id="l15-total-energy">4</span></span> available</span>
         <div class="diamonds" id="l15-energy-pool-diamonds"></div>
@@ -946,6 +965,11 @@
     </div>
 
     <div id="l15-tooltip"></div>
+
+    <section class="l15-year-section">
+      <div class="year-counter">Year: <span class="num" id="l15-year-count">1</span></div>
+      <button type="button" id="l15-next-year-btn" class="next-year-btn">Next Year &rarr;</button>
+    </section>
   </section>
 
   <section id="income-section">
@@ -1353,7 +1377,9 @@ const L15_CATEGORIES = [
 ];
 
 const l15State = {
+  year: 1,
   monthlyIncome: 1250, // player-editable; grid size (l15GridDims) is derived from this
+  incomeModifier: 0, // added straight onto Annual Savings; resets to 0 each Next Year
   placed: [], // { itemKey, col, row } — col/row = top-left cell, 0-indexed
   heartsLastYear: 5, // same starting value as Level 1's DEFAULT_STATE.hearts_last_year
   heartsModifier: 0,
@@ -1389,7 +1415,7 @@ function l15MonthlySavings() {
   return l15State.monthlyIncome - l15MonthlyCost();
 }
 function l15AnnualSavings() {
-  return l15MonthlySavings() * 12;
+  return l15MonthlySavings() * 12 + l15State.incomeModifier;
 }
 
 // Savings This Year defaults to the Savings Calculator's live Annual
@@ -1440,13 +1466,25 @@ function l15GridDims() {
 }
 
 function l15ResetState() {
+  l15State.year = 1;
   l15State.monthlyIncome = 1250;
+  l15State.incomeModifier = 0;
   l15State.placed = [];
   l15State.heartsLastYear = 5;
   l15State.heartsModifier = 0;
   l15State.savingsLastYear = 0;
   l15State.savingsThisYear = null;
   l15State.interestRate = 0;
+}
+
+// Advances the year counter and clears the two per-year modifiers (income
+// and hearts) — everything else (grid placements, energy, interest
+// fields) intentionally carries over; only these two reset each year.
+function l15NextYear() {
+  l15State.year++;
+  l15State.incomeModifier = 0;
+  l15State.heartsModifier = 0;
+  renderLevel1_5();
 }
 
 function l15ItemByKey(key) {
@@ -2181,6 +2219,11 @@ function renderLevel1_5() {
   if (document.activeElement !== incomeInput) {
     incomeInput.value = l15State.monthlyIncome;
   }
+  const incomeModifierInput = document.getElementById('l15-income-modifier-input');
+  if (document.activeElement !== incomeModifierInput) {
+    incomeModifierInput.value = l15State.incomeModifier;
+  }
+  document.getElementById('l15-year-count').textContent = l15State.year;
 
   // Shelf: mark single-instance category groups placed/available.
   document.querySelectorAll('.l15-shelf-category').forEach((el) => {
@@ -2586,6 +2629,13 @@ document.getElementById('l15-income-input').addEventListener('input', (e) => {
   l15BuildGridDom();
   renderLevel1_5();
 });
+
+document.getElementById('l15-income-modifier-input').addEventListener('input', (e) => {
+  l15State.incomeModifier = Number(e.target.value) || 0;
+  renderLevel1_5();
+});
+
+document.getElementById('l15-next-year-btn').addEventListener('click', l15NextYear);
 
 document.getElementById('l15-savings-this-year-input').addEventListener('input', (e) => {
   l15State.savingsThisYear = Number(e.target.value) || 0;

@@ -300,7 +300,12 @@ as completely full (0 cells left) while the actual cost total was
 several dollars under income, showing $0 savings when real money was
 still unspent. `l15TotalCells`/`l15OccupiedCells` still exist for grid
 occupancy/placement purposes (`l15BuildOccupancy` etc.) — they're just no
-longer what Savings is computed from.
+longer what Savings is computed from. Annual Savings
+(`l15AnnualSavings()`) adds one more term on top:
+`l15MonthlySavings() * 12 + l15State.incomeModifier` — a free-entry number
+input next to Monthly Income (`#l15-income-modifier-input`), styled and
+named after Level 1's own income modifier. It resets to 0 every
+`l15NextYear()` call (see Year below), unlike Monthly Income itself.
 
 **Hearts**: each item carries its own `hearts` value straight from the
 spreadsheet's HEARTS column (fractions like "1/4+"/"1/2-" pre-converted
@@ -318,15 +323,18 @@ cost/savings card on the right, mirroring Level 1's Hearts section:
 placed item's own `hearts` value) + `l15State.heartsModifier` (free-entry number
 input, `#l15-hearts-modifier-input`) = `l15CurrentHeartsTotal()`. This is
 a separate, Level-1.5-only heart total — it does not read or write
-`state.hearts_last_year`/`heartsThisYear()` from Level 0/1, and resets to
-5/0 in `l15ResetState()` on every level switch, same as the rest of
-`l15State`.
+`state.hearts_last_year`/`heartsThisYear()` from Level 0/1, resets to 5/0
+in `l15ResetState()` on every level switch, and `heartsModifier`
+additionally resets to 0 every `l15NextYear()` call (see Year below) —
+`heartsLastYear` itself doesn't roll or change on Next Year, only the
+modifier clears.
 
 **Interest Calculator**: a second card (`.l15-interest-box`) sits between
 the Savings Calculator and Hearts cards. Same structure as Level 1's
 Interest Calculator but relabeled and wired to the Savings Calculator
-above it rather than a Next Year rollover (there is none — the Year
-section stays hidden for Level 1.5):
+above it rather than a Next Year rollover — Next Year exists for Level
+1.5 now (see below), but deliberately doesn't touch any Interest
+Calculator field, only the two per-year modifiers:
 - **Savings Last Year** (`l15State.savingsLastYear`, read-only display,
   starts at 0) — the Level-1.5 analog of Level 1's "Current Jar Savings".
 - **Savings This Year** (`l15State.savingsThisYear`, number input) — the
@@ -346,6 +354,22 @@ section stays hidden for Level 1.5):
 
 All three (`savingsLastYear`, `savingsThisYear` back to `null`,
 `interestRate`) reset in `l15ResetState()` on every level switch.
+
+**Year**: `.l15-year-section` (a Level-1.5-specific class, not Level 0/1's
+`.year-section` — `setLevel1_5Visible` toggles `.year-section` by
+querySelector, so reusing that class name for a *second* element earlier
+in the DOM would have made it the one silently toggled instead of Level
+1's own) — a "Year: N" counter and a "Next Year →" button
+(`#l15-next-year-btn`, `.next-year-btn` styling reused as-is) at the
+bottom of the Level 1.5 screen. `l15NextYear()` increments
+`l15State.year` and resets exactly two fields — `incomeModifier` and
+`heartsModifier` — to 0, then re-renders. Everything else (the grid and
+every placed item/energy, Monthly Income itself, the whole Interest
+Calculator) intentionally carries over unchanged; Level 1.5 has no
+pending-expense-reveal system for Next Year to unlock the way Level 1's
+does, so advancing the year is otherwise a no-op beyond clearing those
+two modifiers. `l15State.year` resets to 1 in `l15ResetState()` on every
+level switch, same as the rest of `l15State`.
 
 Art assets (`assets/budgeting-tab/`, copied from
 `tinfa-card-godot-mvp/assets/art/budgeting-tab/`): `belt.png` (shelf
