@@ -136,41 +136,63 @@ opening the door to a future item priced in $62.50 increments that
 doesn't fill a whole small square.
 
 **Categories** (`L15_CATEGORIES`): each belt slot is a category (e.g.
-"Groceries + Cooking"), not an individual item — `category.items` is the
-list of item choices within it. Every category currently offers the same
-three price tiers ($250 / $500 / $1,000, built by `l15MakeTiers()`), shown
-side by side on its belt slot with each tier's own icon (sized true to its
-footprint via `L15_SHELF_UNIT = 20px` per cell) and price — the player
-drags whichever specific tier they want straight onto the grid, no
-intermediate picker step. Single-instance is enforced per *category*, not
-per tier: placing any one tier dims the whole group
-(`l15IsCategoryPlaced`, applied to the `.l15-shelf-category` wrapper) until
-that item is dragged back out — you can't have two tiers of the same
-category on the grid at once.
+"Groceries + Cooking @ Home") — `category.items` is the list of item
+choices within it, transcribed directly from
+`InGameBudgeting - Level1.5.csv` (one spreadsheet row per item; built via
+the `l15Item(key, price, costs, hearts, note)` / `l15Category(key, name,
+type, items)` helpers, not generated). Unlike the earlier flat $250/$500/
+$1,000-per-category version, item counts and prices now vary per
+category (2–5 items each, 30 total), shown side by side on the belt with
+each item's own icon and price — the player drags whichever specific item
+they want straight onto the grid. Single-instance is enforced per
+*category*, not per item: placing any one item dims the whole group
+(`l15IsCategoryPlaced`, applied to the `.l15-shelf-category` wrapper)
+until it's dragged back out — you can't have two items of the same
+category on the grid at once. `category.type` (`'NEED'`/`'WANT'`, from
+the spreadsheet) is copied onto every item in it as `item.category`,
+reserved for a future 50/30/20 breakdown pass; no UI reads it yet.
 
-| Category |
-|---|
-| Rent + Utilities |
-| Groceries + Cooking |
-| Dining Out |
-| Healthcare |
-| Travel + Experiences |
-| Transit + Car |
-| Shopping |
-| Education |
-| Pet |
+| Category | Type | Items |
+|---|---|---|
+| Rent + Utilities | NEED | 5 |
+| Groceries + Cooking @ Home | NEED | 4 |
+| Dining Out | WANT | 4 |
+| Healthcare | NEED | 4 |
+| Travel + Vacations + Experiences | WANT | 3 |
+| Transit + Car Maintenance + Gas | NEED | 4 |
+| Shopping | WANT | 4 |
+| Trade School Education | NEED | 2 |
 
-Every category's three items are priced $250 (4 tiny cells, 2×2,
-bread1.png), $500 (8 tiny cells, 4×2, bread2.png), and $1,000 (16 tiny
-cells, 4×4, bread4.png) — each exactly filling 1/2/4 old small squares'
-worth of area, just measured in the finer tiny-square unit.
-`cells = Math.ceil(price / 62.5)`; shape comes from a fixed lookup
-(`L15_ITEM_SHAPES`) keyed by cell count — a price needing some other cell
-count (e.g. $187.50 → 3 cells) has no shape defined yet, and no category
-currently has one. Each
-item also carries its own `category` field (unrelated to the belt-slot
-category above — this one is always `null` today), reserved for a future
-Needs/Wants (50/30/20) breakdown pass; no UI reads it yet.
+(The earlier "Pet" category from the flat-tier version isn't in the
+spreadsheet and was dropped along with it.)
+
+**Item shape/sprite** — no longer a fixed lookup, since spreadsheet prices
+vary too widely and aren't always round (e.g. $190.50):
+- `l15ItemCells(price) = Math.max(1, Math.round(price / 62.5))` — rounded
+  rather than ceil'd, so a price a couple dollars off a clean multiple
+  (e.g. $127 vs. a "true" $125) still lands on a clean cell count (2)
+  instead of rounding up to 3; always at least 1 cell (covers the $0
+  "on parents' healthcare" item).
+- `l15ItemShape(item)` factors that cell count into the closest-to-square
+  *exact* pair (`w * h === cells`, via a `while` loop shrinking `w` down
+  from `floor(sqrt(cells))` until it divides evenly) — no wasted/
+  overhanging grid space, since the grid's total capacity represents
+  100% of income and a shape can't reserve more area than its price
+  actually costs. A very expensive item (e.g. $2,500 rent → 40 cells →
+  5×8) can legitimately dominate the grid; that's accurate to what it
+  costs, not a bug.
+- `l15ItemSprite(item)` — only items priced at exactly $62.50
+  (bread1.png) or $127 (bread2.png) get a specific sprite; every other
+  price renders as a plain `.l15-square-icon` div instead (per explicit
+  instruction: "for any unspecified amounts, use a square shape").
+  `l15IconHtml(item, styleAttr)` is the one place that branches on this —
+  every icon-drawing call site (shelf, placed item, drag ghost) goes
+  through it rather than checking `l15ItemSprite` itself.
+
+`l15Money(n)` formats a dollar amount for display — spreadsheet prices
+aren't always whole dollars, so this is used instead of a bare
+`` `$${n.toLocaleString()}` `` (which would print "$190.5" instead of
+"$190.50") everywhere a Level 1.5 dollar figure is shown.
 `l15ItemByKey`/`l15CategoryForItemKey` resolve an item or its owning
 category from a placed entry's `itemKey`.
 
@@ -209,8 +231,9 @@ bug shipped once for the trash icon, which broke the instant any drag
 started because `l15SetTrashOpen` built its path with a ternary the old
 per-call-site regex didn't catch).
 
-**Tooltip**: hover or click a shelf or placed item to show its name and
-price in a small floating bubble (`#l15-tooltip`) near the pointer.
+**Tooltip**: hover or click a shelf or placed item to show its category
+name, price, and (if present) the spreadsheet's note text in a small
+floating bubble (`#l15-tooltip`) near the pointer.
 
 **Belt scrolling**: the shelf is a single non-wrapping row
 (`.l15-shelf { flex-wrap: nowrap; overflow-x: hidden }`) inside
@@ -220,25 +243,68 @@ Hovering an arrow starts a `requestAnimationFrame` loop
 until the pointer leaves; arrows hide via `l15UpdateShelfArrows` once
 scrolled fully to that edge.
 
-**Savings Calculator** (`.l15-sidebar`, titled via `.l15-hearts-title`):
-Monthly/Annual Cost = sum of placed item prices (× 12); Monthly/Annual
-Savings = `l15MonthlySavings()` (`(totalCells − occupiedCells) × 62.5`,
-× 12 for annual — dollar totals are unaffected by the tiny-square unit,
-this is just a finer-grained multiplication of the same numbers) —
-recomputed on every `renderLevel1_5()` call, i.e. after every successful
-place/remove/move.
+**Energy**: a separate resource from Level 0/1's — `L15_TOTAL_ENERGY = 4`,
+all spendable (Level 1.5 has no "work" concept eating into it). Shown as
+a diamond pool (`#l15-energy-pool`, reusing the `.energy-pool-cell`/
+`.diamonds`/`.diamond` styling and the shared `renderDiamonds()` helper)
+next to "Monthly Income" at the top of the screen. Each item's `costs`
+array is indexed by energy spent (`costs[0]` = base price = 0 energy;
+`costs[1]`, `costs[2]`, ... are progressively cheaper) — a shorter array
+(Rent, Transit, Trade School Education items all have length 1) means
+that item doesn't accept energy at all (`l15MaxEnergyForItem(item) =
+item.costs.length - 1` is 0). Applying energy doesn't touch the item's
+footprint or `price` (which still drives its grid shape/sprite/badge) —
+only `l15CurrentCost(p)`, which is what actually counts toward Monthly
+Cost.
 
-**Hearts**: every $1,000-tier item carries `hearts: 1` (set in
-`l15MakeTiers`; every other tier is `hearts: 0`) and shows a ❤️ badge
-(`.l15-heart-badge`, absolutely positioned over the icon) on the shelf, on
-the drag ghost, and once placed on the grid — a purely visual/data cue for
-now, with no UI gate on which categories can carry one. A second card
+Per the explicit request, energy is applied by dragging a diamond
+*directly onto a placed item* (not a picker or a slider) — the same
+pointer-based drag pattern as Level 0/1's energy-diamond system and this
+level's own item drag (own module though, not a forced shared
+abstraction: `l15StartEnergyDrag`/`l15OnEnergyDragMove`/
+`l15OnEnergyDragUp`/`l15ApplyEnergyDrop`/`l15UpdateEnergyDropHighlight`),
+reusing `renderDiamonds()` and `findGrabbableDiamond()` directly since
+those two are already fully generic. Every placed item with
+`maxEnergy > 0` shows its own small diamond row stuck to its bottom edge
+(`.l15-item-diamonds`, filled up to `p.energy` — rebuilt in place each
+render rather than the whole item, since only the diamonds actually
+change); items with `maxEnergy === 0` show no diamonds at all. Drop
+targets are marked `.l15-energy-drop-target` + `data-l15-energy-target`
+on the pool and on every placed `.l15-item` (the *whole* item card, not
+just its diamond row, so dropping anywhere on it counts — grabbing an
+*existing* diamond back off an item is the tighter target, resolved via
+`findGrabbableDiamond` inside the single pointerdown handler on `.l15-item`,
+which branches between starting an energy-drag (near a filled diamond) or
+the normal item-move drag (anywhere else) rather than using two competing
+listeners). Pool ↔ item and item ↔ item moves both work, mirroring Level
+0/1's `applyEnergyDrop` semantics exactly, just against `l15State.placed`
+entries instead of `expenses`.
+
+**Savings Calculator** (`.l15-sidebar`, titled via `.l15-hearts-title`):
+Monthly Cost = sum of each placed item's *current* cost
+(`l15CurrentCost(p)` — the energy-discounted figure, not the base
+`price`; see Energy below) × 12 for annual. Monthly/Annual Savings =
+`l15MonthlySavings()` (`(totalCells − occupiedCells) × 62.5`, × 12 for
+annual) deliberately stays purely grid-space-based — the puzzle's core
+mechanic since Level 1.5 shipped — and does *not* factor in energy
+discounts, since energy reduces what an item costs without shrinking its
+footprint. This means Cost + Savings can diverge from a strict
+income-equals-cost-plus-savings identity once energy is in play; that gap
+is real "found" savings from playing efficiently, intentionally not
+reconciled away. Recomputed on every `renderLevel1_5()` call.
+
+**Hearts**: each item carries its own `hearts` value straight from the
+spreadsheet's HEARTS column (fractions like "1/4+"/"1/2-" pre-converted
+to signed decimals when transcribed — e.g. `dining-2000` is `hearts: 1`,
+`transit-127` is `hearts: -0.5`; most items are 0). A positive-hearts item
+shows a ❤️ badge (`.l15-heart-badge`, absolutely positioned over the icon)
+on the shelf, the drag ghost, and once placed — negative/zero-hearts
+items show no badge but still count toward the total. A second card
 (`.l15-hearts-box`, same `.l15-sidebar` styling) sits directly under the
 cost/savings card on the right, mirroring Level 1's Hearts section:
 `l15State.heartsLastYear` (starts at 5, matching Level 1's
-`DEFAULT_STATE.hearts_last_year`) + `l15HeartsThisYear()` (sum of `hearts`
-across every entry in `l15State.placed`, i.e. one point per $1,000 item
-currently on the grid) + `l15State.heartsModifier` (free-entry number
+`DEFAULT_STATE.hearts_last_year`) + `l15HeartsThisYear()` (sum of each
+placed item's own `hearts` value) + `l15State.heartsModifier` (free-entry number
 input, `#l15-hearts-modifier-input`) = `l15CurrentHeartsTotal()`. This is
 a separate, Level-1.5-only heart total — it does not read or write
 `state.hearts_last_year`/`heartsThisYear()` from Level 0/1, and resets to

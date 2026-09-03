@@ -565,11 +565,15 @@
 
   /* ---------- Level 1.5: spatial grid ---------- */
   #level1-5-section { --l15-cell: 42px; }
-  .l15-topline {
-    font-size: 0.95rem;
-    color: var(--ink-muted);
+  .l15-topline-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
     margin-bottom: 18px;
   }
+  .l15-topline { font-size: 0.95rem; color: var(--ink-muted); }
   .l15-topline .num { color: var(--ink); font-weight: 700; }
 
   .l15-shelf-wrap {
@@ -743,6 +747,21 @@
   }
   .l15-drag-ghost img { width: 60%; height: 60%; object-fit: contain; }
 
+  /* Fallback for items whose price isn't $62.50 or $127 (no sprite rule
+     defined for it yet) — a plain colored square instead of an icon. */
+  .l15-square-icon { background: var(--gold); border: 1.5px solid var(--gold-soft); border-radius: 4px; }
+  .l15-item .l15-square-icon, .l15-drag-ghost .l15-square-icon { width: 60%; height: 60%; }
+
+  .l15-item-diamonds {
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+  }
+  .l15-item-diamonds .diamond { width: 9px; height: 9px; border-width: 1px; }
+
   .l15-side-col {
     display: flex;
     flex-direction: column;
@@ -818,9 +837,17 @@
     box-shadow: 0 2px 8px var(--shadow);
     pointer-events: none;
     z-index: 1100;
-    white-space: nowrap;
+    max-width: 240px;
   }
-  #l15-tooltip .l15-tooltip-price { color: var(--accent); margin-left: 4px; }
+  #l15-tooltip .l15-tooltip-price { color: var(--accent); margin-left: 4px; white-space: nowrap; }
+  #l15-tooltip .l15-tooltip-note {
+    margin-top: 3px;
+    font-size: 0.72rem;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink-muted);
+    white-space: normal;
+  }
 
   #l15-alert {
     display: none;
@@ -876,7 +903,13 @@
   </div>
 
   <section id="level1-5-section" style="display:none">
-    <div class="l15-topline">Monthly Income: <span class="num" id="l15-income">$0</span></div>
+    <div class="l15-topline-row">
+      <div class="l15-topline">Monthly Income: <span class="num" id="l15-income">$0</span></div>
+      <div class="energy-pool-cell l15-energy-drop-target" data-l15-energy-target="pool" id="l15-energy-pool">
+        <span class="energy-pool-label"><span class="num"><span id="l15-available-energy">4</span> / <span id="l15-total-energy">4</span></span> available</span>
+        <div class="diamonds" id="l15-energy-pool-diamonds"></div>
+      </div>
+    </div>
 
     <div class="l15-shelf-wrap">
       <button type="button" class="l15-shelf-arrow l15-shelf-arrow-left" id="l15-shelf-arrow-left" aria-label="Scroll shelf left">&#10094;</button>
@@ -1190,43 +1223,122 @@ const L15_CELL_VALUE = 62.5; // dollars per tiny square
 // rather than building the path inline, or the published copy breaks.
 function l15AssetUri(file) { return 'assets/budgeting-tab/' + file; }
 
-// cells-per-price -> footprint shape, in tiny-square units. A price
-// needing something other than 4/8/16 cells (e.g. $187.50 -> 3 cells) has
-// no shape defined yet.
-const L15_ITEM_SHAPES = { 4: { w: 2, h: 2 }, 8: { w: 4, h: 2 }, 16: { w: 4, h: 4 } };
-const L15_SPRITE_BY_CELLS = { 4: 'bread1.png', 8: 'bread2.png', 16: 'bread4.png' };
-
-function l15ItemCells(price) { return Math.ceil(price / L15_CELL_VALUE); }
-function l15ItemShape(item) { return L15_ITEM_SHAPES[l15ItemCells(item.price)]; }
-
-// Builds a category's three price-tier items (every category currently
-// offers the same $250/$500/$1000 spread). `item.category` (Needs/Wants)
-// is carried but unused for now — reserved for a future 50/30/20 pass.
-function l15MakeTiers(categoryKey) {
-  return [250, 500, 1000].map(price => ({
-    key: `${categoryKey}-${price}`,
-    price,
-    category: null,
-    sprite: L15_SPRITE_BY_CELLS[l15ItemCells(price)],
-    hearts: price === 1000 ? 1 : 0, // $1000 tiers show a heart badge and count toward Hearts This Year
-  }));
+// Source-spreadsheet prices aren't always whole dollars (e.g. $190.50),
+// so every dollar figure in Level 1.5 goes through this rather than a
+// bare `$${n.toLocaleString()}`, which would print "$190.5" instead of
+// "$190.50".
+function l15Money(n) {
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 !== 0 ? 2 : 0, maximumFractionDigits: 2 })}`;
 }
 
-// The shelf is organized by expense category, not individual item — a
-// category is one belt slot, and holds a list of item choices (its three
-// price tiers) the player picks from by dragging the specific tier icon
-// they want. `item.category` on each item is unrelated to this and always
-// `null` for now — see l15MakeTiers.
+// Cell count is rounded (not ceil'd) since the source spreadsheet's
+// prices aren't always clean multiples of $62.50 (e.g. $190.50) — this
+// keeps e.g. $127 (nominally "2 tiny squares", off by $2 from $125) at a
+// clean 2 cells rather than rounding up to 3. Always at least 1 cell,
+// including the $0 "on parents' healthcare" item.
+function l15ItemCells(price) { return Math.max(1, Math.round(price / L15_CELL_VALUE)); }
+
+// Footprint shape for an arbitrary cell count: the closest-to-square
+// EXACT factor pair (w*h === cells, no wasted/overhanging grid space —
+// the grid's total capacity represents 100% of income, so a shape can't
+// reserve more area than its price actually costs).
+function l15ItemShape(item) {
+  const cells = l15ItemCells(item.price);
+  let w = Math.floor(Math.sqrt(cells));
+  while (w > 1 && cells % w !== 0) w--;
+  return { w, h: cells / w };
+}
+
+// Only items priced at exactly these two amounts get a specific sprite;
+// everything else renders as a plain square (`.l15-square-icon`) instead
+// of an `<img>` — see every l15AssetUri(item.sprite) call site, which all
+// branch on this returning null.
+function l15ItemSprite(item) {
+  if (item.price === 62.5) return 'bread1.png';
+  if (item.price === 127) return 'bread2.png';
+  return null;
+}
+
+// Every place an item's icon is drawn (shelf, placed grid item, drag
+// ghost) goes through this so the sprite/square-fallback branch only
+// lives in one place. `styleAttr`, if given, is applied as an inline
+// style (used by the shelf, which sizes icons to explicit pixel values;
+// placed items and the drag ghost instead size via CSS percentages).
+function l15IconHtml(item, styleAttr) {
+  const sprite = l15ItemSprite(item);
+  const style = styleAttr ? ` style="${styleAttr}"` : '';
+  if (sprite) return `<img src="${l15AssetUri(sprite)}" alt="${l15Money(item.price)}"${style}>`;
+  return `<div class="l15-square-icon"${style}></div>`;
+}
+
+// One entry per source-spreadsheet row: `costs` is indexed by energy
+// spent (costs[0] = 0 energy = the base placement price; costs[1.. ] are
+// the reduced costs from sticking energy diamonds onto the item once
+// placed — see the Level 1.5 energy system below). A row with only one
+// cost defined (e.g. Rent, Transit, Education) simply doesn't accept
+// energy at all (l15MaxEnergyForItem = costs.length - 1 = 0).
+function l15Item(key, price, costs, hearts, note) {
+  return { key, price, costs, hearts: hearts || 0, note: note || '' };
+}
+
+// A category is one belt slot holding a list of item choices — `type` is
+// this category's Needs/Wants tag from the spreadsheet, copied onto every
+// item in it (`item.category`), reserved for a future 50/30/20 pass; no
+// UI reads it yet.
+function l15Category(key, name, type, items) {
+  return { key, name, type, items: items.map(it => ({ ...it, category: type })) };
+}
+
+// Transcribed from `InGameBudgeting - Level1.5.csv`. Every row in that
+// sheet becomes one draggable item; a row with NULL beyond its first
+// energy column just has a shorter `costs` array.
 const L15_CATEGORIES = [
-  { key: 'rent',        name: 'Rent + Utilities',      items: l15MakeTiers('rent') },
-  { key: 'groceries',   name: 'Groceries + Cooking',   items: l15MakeTiers('groceries') },
-  { key: 'dining',      name: 'Dining Out',            items: l15MakeTiers('dining') },
-  { key: 'healthcare',  name: 'Healthcare',            items: l15MakeTiers('healthcare') },
-  { key: 'travel',      name: 'Travel + Experiences',  items: l15MakeTiers('travel') },
-  { key: 'transit',     name: 'Transit + Car',         items: l15MakeTiers('transit') },
-  { key: 'shopping',    name: 'Shopping',              items: l15MakeTiers('shopping') },
-  { key: 'education',   name: 'Education',             items: l15MakeTiers('education') },
-  { key: 'pet',         name: 'Pet',                   items: l15MakeTiers('pet') },
+  l15Category('rent', 'Rent + Utilities', 'NEED', [
+    l15Item('rent-2500', 2500, [2500], 0.25),
+    l15Item('rent-2000', 2000, [2000]),
+    l15Item('rent-1500', 1500, [1500], -0.25, 'renting w housemates?'),
+    l15Item('rent-1000', 1000, [1000], -0.5, 'bad apartment...'),
+    l15Item('rent-127', 127, [127], -0.25, 'living at home...'),
+  ]),
+  l15Category('groceries', 'Groceries + Cooking @ Home', 'NEED', [
+    l15Item('groceries-250', 250, [250, 190.5, 127], 0, 'paying my fair share of groceries!'),
+    l15Item('groceries-190', 190.5, [190.5, 127, 62.5], 0, 'paying my fair share of groceries!'),
+    l15Item('groceries-62-a', 62.5, [62.5, 62.5, 62.5], 0, 'paying my fair share of groceries!'),
+    l15Item('groceries-62-b', 62.5, [62.5, 62.5, 62.5], 0, 'mostly snacks, tbh'),
+  ]),
+  l15Category('dining', 'Dining Out', 'WANT', [
+    l15Item('dining-2000', 2000, [2000, 1750], 1, 'dining out 2.5x a day, plus 1/4 hearts/yr'),
+    l15Item('dining-1000', 1000, [1000, 750], 0.5, 'dining out 1x a day'),
+    l15Item('dining-250', 250, [250, 190.5], 0.25, 'dining out 2.5x a week'),
+    l15Item('dining-127', 127, [127, 62.5], 0, 'dining out 1x a week'),
+  ]),
+  l15Category('healthcare', 'Healthcare', 'NEED', [
+    l15Item('healthcare-250', 250, [250, 190.5], 0, '0.75x modifier on healthcare costs! Working out feels good! (+1/4 hearts/yr if 1 energy)'),
+    l15Item('healthcare-190', 190.5, [190.5, 127], 0, 'Working out feels good! (+1/4 hearts/yr if 1 energy)'),
+    l15Item('healthcare-127', 127, [127, 62.5], 0, '2x modifier on healthcare costs... Working out feels good! (+1/4 hearts/yr if 1 energy)'),
+    l15Item('healthcare-0', 0, [0, 0], 0, "On parents' healthcare til 26! Working out feels good! (+1/4 hearts/yr if 1 energy)"),
+  ]),
+  l15Category('travel', 'Travel + Vacations + Experiences', 'WANT', [
+    l15Item('travel-1000', 1000, [1000, 750], 1),
+    l15Item('travel-250', 250, [250, 190.5], 0.25),
+    l15Item('travel-127', 127, [127, 62.5]),
+  ]),
+  l15Category('transit', 'Transit + Car Maintenance + Gas', 'NEED', [
+    l15Item('transit-750', 750, [750], 1, 'dream car! insurance is expensive..'),
+    l15Item('transit-500', 500, [500], 0, 'reliable, classic, safe car'),
+    l15Item('transit-250', 250, [250], 0, 'cheap car, 2x mod on maintenance :('),
+    l15Item('transit-127', 127, [127], -0.5, 'no car, just bussin~'),
+  ]),
+  l15Category('shopping', 'Shopping', 'WANT', [
+    l15Item('shopping-1000', 1000, [1000, 875], 0.5),
+    l15Item('shopping-750', 750, [750, 500], 0.25),
+    l15Item('shopping-500', 500, [500, 375]),
+    l15Item('shopping-250', 250, [250, 127], 0, 'still gotta buy SOME things, like toiletries...'),
+  ]),
+  l15Category('education', 'Trade School Education', 'NEED', [
+    l15Item('education-500', 500, [500]),
+    l15Item('education-250', 250, [250]),
+  ]),
 ];
 
 const l15State = {
@@ -1271,6 +1383,27 @@ function l15SavingsThisYear() {
 // year's interest" figure, not accumulated into savingsLastYear anywhere.
 function l15EarnedInterest() {
   return (l15State.savingsLastYear + l15SavingsThisYear()) * (l15State.interestRate / 100);
+}
+
+// ---------- Level 1.5: energy ----------
+// A separate, smaller pool from Level 0/1's total_energy/work_energy —
+// Level 1.5 has no "work" concept, so the whole pool is spendable.
+// Dropping a pool diamond onto a placed item spends one there (see the
+// drag module below), advancing that item's cost one step down its own
+// `costs` array — a shorter `costs` array (Rent, Transit, Education) just
+// means that item doesn't accept energy at all.
+const L15_TOTAL_ENERGY = 4;
+
+function l15MaxEnergyForItem(item) { return item.costs.length - 1; }
+function l15EnergySpent() { return l15State.placed.reduce((sum, p) => sum + p.energy, 0); }
+function l15AvailableEnergy() { return L15_TOTAL_ENERGY - l15EnergySpent(); }
+
+// A placed entry's actual current cost, after whatever energy is stuck
+// on it — this is what counts toward Monthly Cost, not the item's base
+// `price` (which stays fixed, since it also determines the grid footprint).
+function l15CurrentCost(p) {
+  const item = l15ItemByKey(p.itemKey);
+  return item.costs[Math.min(p.energy, item.costs.length - 1)];
 }
 
 function l15BigSquareCount() {
@@ -1997,7 +2130,8 @@ function l15BuildShelfDom() {
       const el = document.createElement('div');
       el.className = 'l15-shelf-item';
       el.dataset.itemKey = item.key;
-      el.innerHTML = `<div class="l15-shelf-icon-wrap"><img src="${l15AssetUri(item.sprite)}" alt="${category.name} $${item.price}" style="width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}</div><span class="l15-shelf-item-price">$${item.price}</span>`;
+      const iconStyle = `width:${shape.w * L15_SHELF_UNIT}px;height:${shape.h * L15_SHELF_UNIT}px;`;
+      el.innerHTML = `<div class="l15-shelf-icon-wrap">${l15IconHtml(item, iconStyle)}${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}</div><span class="l15-shelf-item-price">${l15Money(item.price)}</span>`;
       el.addEventListener('pointerdown', (e) => {
         if (catEl.classList.contains('placed')) return;
         startL15Drag(e, { type: 'shelf', key: item.key });
@@ -2018,7 +2152,8 @@ function l15BuildShelfDom() {
 function l15ShowTooltip(el, category, item) {
   const tip = document.getElementById('l15-tooltip');
   const rect = el.getBoundingClientRect();
-  tip.innerHTML = `${category.name}<span class="l15-tooltip-price">$${item.price}/mo</span>`;
+  const note = item.note ? `<div class="l15-tooltip-note">${item.note}</div>` : '';
+  tip.innerHTML = `${category.name}<span class="l15-tooltip-price">${l15Money(item.price)}/mo</span>${note}`;
   tip.style.display = 'block';
   tip.style.left = (rect.left + rect.width / 2) + 'px';
   tip.style.top = (rect.top - 8) + 'px';
@@ -2050,16 +2185,31 @@ function renderLevel1_5() {
     const category = l15CategoryForItemKey(p.itemKey);
     const shape = l15ItemShape(item);
     let el = l15ItemRefs.get(p.itemKey);
+    const maxEnergy = l15MaxEnergyForItem(item);
     if (!el) {
       el = document.createElement('div');
-      el.className = 'l15-item';
+      el.className = 'l15-item l15-energy-drop-target';
       el.dataset.itemKey = p.itemKey;
-      el.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}`;
-      el.addEventListener('pointerdown', (e) => startL15Drag(e, { type: 'placed', key: p.itemKey }));
+      el.dataset.l15EnergyTarget = p.itemKey;
+      const diamondsHtml = maxEnergy > 0 ? `<div class="l15-item-diamonds diamonds">${renderDiamonds(p.energy, maxEnergy)}</div>` : '';
+      el.innerHTML = `${l15IconHtml(item)}${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}${diamondsHtml}`;
+      el.addEventListener('pointerdown', (e) => {
+        const diamondsEl = el.querySelector('.l15-item-diamonds');
+        if (diamondsEl && findGrabbableDiamond(diamondsEl, e.clientX, e.clientY)) {
+          l15StartEnergyDrag(e, { type: 'item', key: p.itemKey });
+          return;
+        }
+        startL15Drag(e, { type: 'placed', key: p.itemKey });
+      });
       el.addEventListener('mouseenter', () => l15ShowTooltip(el, category, item));
       el.addEventListener('mouseleave', l15HideTooltip);
       el.addEventListener('click', () => l15ShowTooltip(el, category, item));
       l15ItemRefs.set(p.itemKey, el);
+    } else {
+      // Diamonds are rebuilt in place each render (cheap — at most 3 of
+      // them) so applying/removing energy shows up without a full rebuild.
+      const diamondsEl = el.querySelector('.l15-item-diamonds');
+      if (diamondsEl) diamondsEl.innerHTML = renderDiamonds(p.energy, maxEnergy);
     }
     if (el.parentElement !== tray) tray.appendChild(el);
     el.style.width = (shape.w * cellPx) + 'px';
@@ -2075,12 +2225,23 @@ function renderLevel1_5() {
     }
   });
 
-  const monthlyCost = l15State.placed.reduce((sum, p) => sum + l15ItemByKey(p.itemKey).price, 0);
+  // Monthly Cost reflects each item's actual, energy-discounted cost —
+  // Monthly Savings deliberately stays purely grid-space-based (leftover
+  // cells x $62.50), the puzzle's core mechanic since Level 1.5 shipped.
+  // Energy discounts a placed item's cost without shrinking its
+  // footprint, so the two can diverge from a strict income = cost +
+  // savings identity when energy is in play — that gap is real "found"
+  // savings from playing efficiently, intentionally not reconciled away.
+  const monthlyCost = l15State.placed.reduce((sum, p) => sum + l15CurrentCost(p), 0);
   const annualCost = monthlyCost * 12;
-  document.getElementById('l15-monthly-cost').textContent = `$${monthlyCost.toLocaleString()}`;
-  document.getElementById('l15-annual-cost').textContent = `$${annualCost.toLocaleString()}`;
-  document.getElementById('l15-monthly-savings').textContent = `$${l15MonthlySavings().toLocaleString()}`;
-  document.getElementById('l15-annual-savings').textContent = `$${l15AnnualSavings().toLocaleString()}`;
+  document.getElementById('l15-monthly-cost').textContent = l15Money(monthlyCost);
+  document.getElementById('l15-annual-cost').textContent = l15Money(annualCost);
+  document.getElementById('l15-monthly-savings').textContent = l15Money(l15MonthlySavings());
+  document.getElementById('l15-annual-savings').textContent = l15Money(l15AnnualSavings());
+
+  document.getElementById('l15-available-energy').textContent = l15AvailableEnergy();
+  document.getElementById('l15-total-energy').textContent = L15_TOTAL_ENERGY;
+  document.getElementById('l15-energy-pool-diamonds').innerHTML = renderDiamonds(l15AvailableEnergy(), L15_TOTAL_ENERGY);
 
   document.getElementById('l15-savings-last-year').textContent = `$${Math.round(l15State.savingsLastYear).toLocaleString()}`;
   const savingsThisYearInput = document.getElementById('l15-savings-this-year-input');
@@ -2243,7 +2404,7 @@ function l15ApplyDrop(clientX, clientY) {
       p.col = l15DragCandidate.col;
       p.row = l15DragCandidate.row;
     } else {
-      l15State.placed.push({ itemKey: source.key, col: l15DragCandidate.col, row: l15DragCandidate.row });
+      l15State.placed.push({ itemKey: source.key, col: l15DragCandidate.col, row: l15DragCandidate.row, energy: 0 });
     }
     return;
   }
@@ -2298,7 +2459,6 @@ function startL15Drag(e, source) {
   e.preventDefault();
   l15DragSource = source;
   const item = l15ItemByKey(source.key);
-  const category = l15CategoryForItemKey(source.key);
   const shape = l15ItemShape(item);
   const cellPx = l15CellPx();
 
@@ -2307,7 +2467,7 @@ function startL15Drag(e, source) {
   l15DragGhost.style.width = (shape.w * cellPx) + 'px';
   l15DragGhost.style.height = (shape.h * cellPx) + 'px';
   l15DragGhost.style.transform = 'translate(-50%, -50%)';
-  l15DragGhost.innerHTML = `<img src="${l15AssetUri(item.sprite)}" alt="${category.name}">${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}`;
+  l15DragGhost.innerHTML = `${l15IconHtml(item)}${item.hearts > 0 ? '<span class="l15-heart-badge">❤️</span>' : ''}`;
   document.body.appendChild(l15DragGhost);
   l15MoveGhost(e.clientX, e.clientY);
 
@@ -2316,6 +2476,98 @@ function startL15Drag(e, source) {
 }
 
 document.getElementById('l15-trash').addEventListener('pointerdown', (e) => e.preventDefault());
+
+// ---------- Level 1.5: energy drag-and-drop ----------
+// Same shape as the Level 0/1 energy-diamond drag above — floating ghost,
+// elementFromPoint+closest() drop-target resolution — reusing that
+// system's generic renderDiamonds()/findGrabbableDiamond() directly, but
+// with its own state/apply logic since the drop targets here are placed
+// grid items (keyed by itemKey) plus this level's own pool, not
+// Level 0/1's `expenses` array.
+let l15EnergyDragGhost = null;
+let l15EnergyDragSource = null; // { type: 'pool' } | { type: 'item', key }
+
+function l15MoveEnergyGhost(x, y) {
+  if (!l15EnergyDragGhost) return;
+  l15EnergyDragGhost.style.left = x + 'px';
+  l15EnergyDragGhost.style.top = y + 'px';
+}
+
+function l15UpdateEnergyDropHighlight(x, y) {
+  document.querySelectorAll('.l15-energy-drop-target.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const el = document.elementFromPoint(x, y);
+  const target = el && el.closest('.l15-energy-drop-target');
+  if (target) target.classList.add('drag-over');
+}
+
+function l15ApplyEnergyDrop(source, targetKey) {
+  if (!source || !targetKey) return;
+
+  if (source.type === 'pool') {
+    if (targetKey === 'pool') return;
+    const p = l15State.placed.find(p => p.itemKey === targetKey);
+    if (!p) return;
+    const item = l15ItemByKey(p.itemKey);
+    if (p.energy < l15MaxEnergyForItem(item) && l15AvailableEnergy() > 0) {
+      p.energy++;
+    }
+    return;
+  }
+
+  if (targetKey === source.key) return; // dropped back on itself
+  const fromP = l15State.placed.find(p => p.itemKey === source.key);
+  if (!fromP) return;
+
+  if (targetKey === 'pool') {
+    fromP.energy--;
+    return;
+  }
+  const toP = l15State.placed.find(p => p.itemKey === targetKey);
+  const toItem = toP && l15ItemByKey(toP.itemKey);
+  if (toP && toItem && toP.energy < l15MaxEnergyForItem(toItem)) {
+    fromP.energy--;
+    toP.energy++;
+  }
+}
+
+function l15OnEnergyDragMove(e) {
+  l15MoveEnergyGhost(e.clientX, e.clientY);
+  l15UpdateEnergyDropHighlight(e.clientX, e.clientY);
+}
+
+function l15OnEnergyDragUp(e) {
+  document.removeEventListener('pointermove', l15OnEnergyDragMove);
+  document.removeEventListener('pointerup', l15OnEnergyDragUp);
+  document.querySelectorAll('.l15-energy-drop-target.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const target = el && el.closest('.l15-energy-drop-target');
+  l15ApplyEnergyDrop(l15EnergyDragSource, target ? target.dataset.l15EnergyTarget : null);
+
+  if (l15EnergyDragGhost) {
+    l15EnergyDragGhost.remove();
+    l15EnergyDragGhost = null;
+  }
+  l15EnergyDragSource = null;
+  renderLevel1_5();
+}
+
+function l15StartEnergyDrag(e, source) {
+  e.preventDefault();
+  l15EnergyDragSource = source;
+  l15EnergyDragGhost = document.createElement('div');
+  l15EnergyDragGhost.className = 'diamond filled drag-ghost';
+  document.body.appendChild(l15EnergyDragGhost);
+  l15MoveEnergyGhost(e.clientX, e.clientY);
+  document.addEventListener('pointermove', l15OnEnergyDragMove);
+  document.addEventListener('pointerup', l15OnEnergyDragUp);
+}
+
+document.getElementById('l15-energy-pool').addEventListener('pointerdown', (e) => {
+  const diamonds = document.getElementById('l15-energy-pool-diamonds');
+  if (!findGrabbableDiamond(diamonds, e.clientX, e.clientY)) return;
+  l15StartEnergyDrag(e, { type: 'pool' });
+});
 
 document.getElementById('l15-hearts-modifier-input').addEventListener('input', (e) => {
   l15State.heartsModifier = Number(e.target.value) || 0;
