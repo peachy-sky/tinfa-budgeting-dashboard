@@ -564,7 +564,12 @@
   }
 
   /* ---------- Level 1.5: spatial grid ---------- */
-  #level1-5-section { --l15-cell: 42px; }
+  #level1-5-section { --l15-cell: 84px; }
+  /* Scoped to Level 1.5's own energy pool badge only -- .energy-pool-cell
+     is shared styling with Level 0/1's pool, which must stay its own
+     size. */
+  #l15-energy-pool .diamonds { gap: 12px; }
+  #l15-energy-pool .diamond { width: 40px; height: 40px; border-width: 4px; }
   .l15-topline-row {
     display: flex;
     align-items: flex-start;
@@ -765,15 +770,15 @@
      positioned the same way via the two selectors below .l15-heart-badge). */
   .l15-item-badges {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -8px;
+    right: -8px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 2px;
+    gap: 4px;
   }
-  .l15-item-diamonds { display: flex; gap: 2px; }
-  .l15-item-diamonds .diamond { width: 9px; height: 9px; border-width: 1px; }
+  .l15-item-diamonds { display: flex; gap: 4px; }
+  .l15-item-diamonds .diamond { width: 18px; height: 18px; border-width: 2px; }
 
   .l15-side-col {
     display: flex;
@@ -811,8 +816,28 @@
   }
   .l15-hearts-box .income-input, .l15-interest-box .income-input { width: 56px; }
 
+  .l15-endgame-box {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .l15-endgame-box .l15-hearts-title { font-size: 1.3rem; }
+  .l15-endgame-box .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.95rem; color: var(--ink-muted); }
+  .l15-endgame-box .row .num { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+  .l15-endgame-box p {
+    margin: 10px 0 0;
+    font-size: 0.95rem;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
   .l15-heart-badge {
-    font-size: 14px;
+    font-size: 28px;
     line-height: 1;
     filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
     pointer-events: none;
@@ -822,8 +847,8 @@
   .l15-shelf-icon-wrap .l15-heart-badge,
   .l15-drag-ghost .l15-heart-badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -8px;
+    right: -8px;
   }
 
   .l15-trash {
@@ -903,9 +928,14 @@
     font-weight: 600;
     font-size: 0.88rem;
   }
+  #l15-alert.success {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 
   @media (max-width: 760px) {
-    #level1-5-section { --l15-cell: 32px; }
+    #level1-5-section { --l15-cell: 64px; }
     .l15-board { flex-direction: column; }
     .l15-side-col { width: 100%; }
     .l15-sidebar { min-width: 0; width: 100%; }
@@ -1006,6 +1036,13 @@
     <section class="l15-year-section">
       <div class="year-counter">Year: <span class="num" id="l15-year-count">1</span></div>
       <button type="button" id="l15-next-year-btn" class="next-year-btn">Next Year &rarr;</button>
+    </section>
+
+    <section class="l15-endgame-box" id="l15-endgame-box" style="display:none">
+      <div class="l15-hearts-title">Game Complete!</div>
+      <div class="row"><span>Final Savings</span><span class="num" id="l15-final-savings">$0</span></div>
+      <div class="row"><span>Final Hearts</span><span class="num" id="l15-final-hearts">0</span></div>
+      <p id="l15-retirement-line"></p>
     </section>
   </section>
 
@@ -1478,7 +1515,23 @@ const l15State = {
   // tracking Annual Savings, even if the grid changes afterward.
   savingsThisYear: null,
   interestRate: 0, // player enters e.g. "3" meaning 3% (0.03)
+  gameEnded: false, // set once "End Game" (Next Year at year === L15_NUM_YEARS) is clicked
 };
+
+// Level 1.5 runs for a fixed number of years — the Next Year button reads
+// "End Game" once the player is on the last one, and clicking it there
+// ends the level instead of advancing to a year that doesn't exist.
+const L15_NUM_YEARS = 5;
+// How many years out Sallie's ending savings are projected to grow, for
+// the end-game retirement-growth line.
+const L15_RETIREMENT_YEARS = 38;
+
+// Compound growth of the final Savings Last Year total at the player's
+// own interest rate, projected L15_RETIREMENT_YEARS years into the
+// future — shown in the end-game box's retirement sentence.
+function l15RetirementGrowth() {
+  return l15State.savingsLastYear * Math.pow(1 + l15State.interestRate / 100, L15_RETIREMENT_YEARS);
+}
 
 // Sum of `hearts` across every placed item (currently only $1000 tiers
 // carry a nonzero value) — mirrors Level 1's heartsThisYear(), but reads
@@ -1568,6 +1621,7 @@ function l15ResetState() {
   l15State.savingsLastYear = 0;
   l15State.savingsThisYear = null;
   l15State.interestRate = 0;
+  l15State.gameEnded = false;
   l15PlacePresetSavings();
 }
 
@@ -1631,12 +1685,25 @@ function l15ValidateCategoriesBeforeNextYear() {
 // resumes tracking the fresh Annual Savings figure) — everything else
 // (grid placements, energy, interest rate) intentionally carries over.
 // The belt's category roster can also change (see L15_PENDING_CATEGORIES),
-// so the shelf is rebuilt, not just re-rendered.
+// so the shelf is rebuilt, not just re-rendered. On year L15_NUM_YEARS
+// (the button reads "End Game" there — see renderLevel1_5), the rollover
+// still happens but the level ends instead of advancing further.
 function l15NextYear() {
   if (!l15ValidateCategoriesBeforeNextYear()) return;
 
   l15State.savingsLastYear += l15SavingsThisYear() + l15EarnedInterest();
   l15State.heartsLastYear += l15HeartsThisYear() + l15State.heartsModifier;
+
+  // "End Game": clicking Next Year on the last year rolls savings/hearts
+  // over one final time (above) but doesn't advance to a year that
+  // doesn't exist — it ends the level and reveals the end-game box
+  // instead of the usual new-year message.
+  if (l15State.year === L15_NUM_YEARS) {
+    l15State.gameEnded = true;
+    renderLevel1_5();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
 
   l15State.year++;
   l15State.incomeModifier = 0;
@@ -1654,9 +1721,12 @@ function l15NextYear() {
   renderLevel1_5();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  l15ShowAlert(newCategory
-    ? `New year! Welcome to year ${l15State.year}. You have a new expense: ${newCategory.name}.`
-    : `New year! Welcome to year ${l15State.year}.`);
+  l15ShowAlert(
+    newCategory
+      ? `New year! Welcome to year ${l15State.year}. You have a new expense: ${newCategory.name}.`
+      : `New year! Welcome to year ${l15State.year}.`,
+    { success: true, durationMs: 5000 }
+  );
 }
 
 function l15ItemByKey(key) {
@@ -2407,6 +2477,23 @@ function renderLevel1_5() {
   }
   document.getElementById('l15-year-count').textContent = l15State.year;
 
+  // Next Year button reads "End Game" on the last playable year; once the
+  // game has actually ended, hide it and swap in the end-game summary box.
+  const nextYearBtn = document.getElementById('l15-next-year-btn');
+  nextYearBtn.style.display = l15State.gameEnded ? 'none' : '';
+  nextYearBtn.textContent = l15State.year === L15_NUM_YEARS ? 'End Game' : 'Next Year →';
+
+  const endgameBox = document.getElementById('l15-endgame-box');
+  endgameBox.style.display = l15State.gameEnded ? 'flex' : 'none';
+  if (l15State.gameEnded) {
+    document.getElementById('l15-final-savings').textContent = l15Money(l15State.savingsLastYear);
+    document.getElementById('l15-final-hearts').textContent = l15State.heartsLastYear.toLocaleString();
+    document.getElementById('l15-retirement-line').textContent =
+      `You helped Sallie build her savings to ${l15Money(l15State.savingsLastYear)}. When she retires in ` +
+      `${L15_RETIREMENT_YEARS} years, this will have grown to ${l15Money(l15RetirementGrowth())} in her ` +
+      `${l15State.interestRate}% savings account.`;
+  }
+
   // Shelf: mark single-instance category groups placed/available. A
   // category that failed the Next Year check (see
   // l15ValidateCategoriesBeforeNextYear) keeps glowing red until it
@@ -2951,12 +3038,13 @@ document.getElementById('l15-shelf').addEventListener('scroll', l15UpdateShelfAr
 // ---------- Level 1.5: invalid-drop alert ----------
 let l15AlertTimeout = null;
 
-function l15ShowAlert(message) {
+function l15ShowAlert(message, { success = false, durationMs = 2400 } = {}) {
   const el = document.getElementById('l15-alert');
   el.textContent = message;
   el.style.display = 'block';
+  el.classList.toggle('success', success);
   clearTimeout(l15AlertTimeout);
-  l15AlertTimeout = setTimeout(() => { el.style.display = 'none'; }, 2400);
+  l15AlertTimeout = setTimeout(() => { el.style.display = 'none'; }, durationMs);
 }
 
 // Scans every cell for whether the item could fit somewhere (ignoring

@@ -142,7 +142,20 @@ CSS in JS: `l15TinyOffset(i, cellPx) = L15_TRAY_PAD + i * (cellPx +
 L15_CELL_GAP)`, matching `.l15-tray`'s own CSS `padding`/`gap`.
 `l15PositionPlacedItem` and `l15PixelToCell` (the drag-candidate inverse
 lookup) both go through this one function, so the two stay in sync.
-`--l15-cell` is the cell's pixel size (42px desktop / 32px mobile).
+`--l15-cell` is the cell's pixel size (84px desktop / 64px mobile — doubled
+from the original 42px/32px per explicit request, so the tray and every
+placed item on it read noticeably bigger; nothing else needed to change
+since every placed item's own size is already computed from `shape *
+cellPx`). The energy diamonds and heart badge shown on a placed item
+(`.l15-item-diamonds .diamond`, `.l15-heart-badge`) were doubled to match
+(18px/2px-border and 28px respectively, up from 9px/1px and 14px) — the
+heart badge rule is shared with the shelf/drag-ghost context, so shelf
+hearts got bigger too. The energy *pool* badge at the top of the screen
+(`#l15-energy-pool`) reuses Level 0/1's `.energy-pool-cell`/`.diamond`
+styling (20px), so it has its own scoped override
+(`#l15-energy-pool .diamond { width: 40px; ... }`) rather than doubling
+the shared rule, which would have also doubled Level 0/1's own energy
+badge.
 
 Changing Annual Income resizes the grid, so any current placements could
 end up out of bounds or overlapping — the input's `input` handler clears
@@ -414,7 +427,35 @@ entry in `L15_PENDING_CATEGORIES` just became visible this click
 (`L15_PENDING_CATEGORIES[l15State.year - 2]`, since `year` has already
 been incremented by this point); once every pending category has already
 been revealed (year 6+) that index is `undefined` and the message
-shortens to "New year! Welcome to year N." with no expense line.
+shortens to "New year! Welcome to year N." with no expense line. This
+message is styled green, not the alert's default red — `l15ShowAlert`
+takes an options object (`{ success, durationMs }`, both optional) and
+toggles a `.success` class (using `--accent`/`--accent-soft` instead of
+`--danger`/`--danger-soft`) — and stays up 5000ms instead of the default
+2400ms, since it's a celebratory milestone rather than a warning that
+should get out of the way quickly. Every other `l15ShowAlert` call
+(invalid drop, missing category) is unchanged — still red, still 2400ms.
+
+**End Game**: the level runs for a fixed `L15_NUM_YEARS = 5` years. Once
+`l15State.year === L15_NUM_YEARS`, the button relabels itself "End Game"
+(checked in `renderLevel1_5`) instead of "Next Year →". Clicking it there
+still performs the exact same savings/hearts rollover described above
+(one final time, using this last year's numbers) but does **not**
+advance `year`, rebuild the shelf, or show the new-year message — instead
+`l15State.gameEnded` is set `true`, the Next Year/End Game button is
+hidden entirely, and a new `#l15-endgame-box` section (reusing
+`.l15-sidebar`/`.l15-hearts-title` styling, full width, below the year
+counter) appears showing:
+- **Final Savings** — `l15State.savingsLastYear` after this last rollover.
+- **Final Hearts** — `l15State.heartsLastYear` after this last rollover.
+- A retirement sentence: "You helped Sallie build her savings to
+  [Final Savings]. When she retires in 38 years, this will have grown to
+  [retirement_growth] in her [interest rate]% savings account." —
+  `l15RetirementGrowth() = savingsLastYear * (1 + interestRate/100) ^
+  L15_RETIREMENT_YEARS`, a plain compound-growth projection using the
+  player's own Interest Rate field, `L15_RETIREMENT_YEARS = 38`.
+`l15State.gameEnded` resets to `false` in `l15ResetState()` on every
+level switch, same as the rest of `l15State`.
 
 **Year-based category reveal**: unlike Level 0/1's per-expense pending
 reveal, Level 1.5 hides four whole *categories* at Year 1 —
