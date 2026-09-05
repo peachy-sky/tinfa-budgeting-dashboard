@@ -1623,18 +1623,40 @@ function l15ValidateCategoriesBeforeNextYear() {
   return false;
 }
 
-// Advances the year counter and clears the two per-year modifiers (income
-// and hearts) — everything else (grid placements, energy, interest
-// fields) intentionally carries over; only these two reset each year.
+// Advances the year counter, rolls this year's savings + interest into
+// Savings Last Year and this year's hearts + modifier into Hearts Last
+// Year (mirrors Level 1's own next-year-btn rollover exactly, just
+// against l15State's fields), and clears the two per-year modifiers
+// (income and hearts) plus Savings This Year (back to null, so it
+// resumes tracking the fresh Annual Savings figure) — everything else
+// (grid placements, energy, interest rate) intentionally carries over.
 // The belt's category roster can also change (see L15_PENDING_CATEGORIES),
 // so the shelf is rebuilt, not just re-rendered.
 function l15NextYear() {
   if (!l15ValidateCategoriesBeforeNextYear()) return;
+
+  l15State.savingsLastYear += l15SavingsThisYear() + l15EarnedInterest();
+  l15State.heartsLastYear += l15HeartsThisYear() + l15State.heartsModifier;
+
   l15State.year++;
   l15State.incomeModifier = 0;
   l15State.heartsModifier = 0;
+  l15State.savingsThisYear = null;
+
+  // L15_PENDING_CATEGORIES[year - 2]: the category that just became
+  // visible this Next Year click (year 2 unlocks index 0, etc. — see
+  // l15VisibleCategories, which hides L15_PENDING_CATEGORIES.slice(year - 1)).
+  // undefined once every pending category has already been revealed.
+  const newCategoryKey = L15_PENDING_CATEGORIES[l15State.year - 2];
+  const newCategory = newCategoryKey ? L15_CATEGORIES.find(c => c.key === newCategoryKey) : null;
+
   l15BuildShelfDom();
   renderLevel1_5();
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  l15ShowAlert(newCategory
+    ? `New year! Welcome to year ${l15State.year}. You have a new expense: ${newCategory.name}.`
+    : `New year! Welcome to year ${l15State.year}.`);
 }
 
 function l15ItemByKey(key) {

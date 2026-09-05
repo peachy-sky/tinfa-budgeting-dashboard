@@ -390,14 +390,31 @@ querySelector, so reusing that class name for a *second* element earlier
 in the DOM would have made it the one silently toggled instead of Level
 1's own) — a "Year: N" counter and a "Next Year →" button
 (`#l15-next-year-btn`, `.next-year-btn` styling reused as-is) at the
-bottom of the Level 1.5 screen. `l15NextYear()` increments
-`l15State.year` and resets exactly two fields — `incomeModifier` and
-`heartsModifier` — to 0, then re-renders. Everything else (the grid and
-every placed item/energy, Monthly Income itself, the whole Interest
-Calculator) intentionally carries over unchanged beyond clearing those
-two modifiers and this year's category roster (below). `l15State.year`
-resets to 1 in `l15ResetState()` on every level switch, same as the rest
-of `l15State`.
+bottom of the Level 1.5 screen. On a successful advance, `l15NextYear()`
+mirrors Level 1's own next-year-btn rollover exactly, just against
+`l15State`'s fields instead of `state`'s: `savingsLastYear +=
+l15SavingsThisYear() + l15EarnedInterest()`, and `heartsLastYear +=
+l15HeartsThisYear() + heartsModifier` — both computed *before* `year`
+increments or any modifier resets, since they read live values that the
+resets below would otherwise zero out first. It then increments
+`l15State.year` and resets `incomeModifier`, `heartsModifier` to 0 and
+`savingsThisYear` back to `null` (so it resumes tracking the fresh Annual
+Savings figure next year rather than staying pinned to whatever the
+player last typed). Everything else (the grid and every placed
+item/energy, Monthly Income itself, `interestRate`) intentionally carries
+over unchanged beyond clearing those fields and this year's category
+roster (below). `l15State.year` resets to 1 in `l15ResetState()` on every
+level switch, same as the rest of `l15State`.
+
+After the rollover and re-render, the screen scrolls to the top
+(`window.scrollTo({ top: 0, behavior: 'smooth' })`) and
+`l15ShowAlert()` announces "New year! Welcome to year N. You have a new
+expense: [Category Name]." — the category name comes from whichever
+entry in `L15_PENDING_CATEGORIES` just became visible this click
+(`L15_PENDING_CATEGORIES[l15State.year - 2]`, since `year` has already
+been incremented by this point); once every pending category has already
+been revealed (year 6+) that index is `undefined` and the message
+shortens to "New year! Welcome to year N." with no expense line.
 
 **Year-based category reveal**: unlike Level 0/1's per-expense pending
 reveal, Level 1.5 hides four whole *categories* at Year 1 —
