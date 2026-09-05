@@ -2340,7 +2340,12 @@ function l15BuildShelfDom() {
       el.addEventListener('mouseleave', l15HideTooltip);
       el.addEventListener('click', () => l15ShowTooltip(el, category, item));
       tiersEl.appendChild(el);
-      l15ItemRefs.set(item.key, null); // placed-element ref filled in by renderLevel1_5
+      // Only seed a fresh ref if this item has never been placed before —
+      // l15BuildShelfDom() re-runs on every Next Year (roster can change),
+      // and clobbering an existing ref here would orphan its already-placed
+      // tray element (still in the DOM, no longer tracked) while
+      // renderLevel1_5() builds a second, duplicate element for it.
+      if (!l15ItemRefs.has(item.key)) l15ItemRefs.set(item.key, null);
     });
     catEl.appendChild(tiersEl);
     shelf.appendChild(catEl);

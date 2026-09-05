@@ -412,7 +412,16 @@ Dining Out, Travel, Trade School Education); by Year 5 all 8 are visible
 and further Next Year clicks leave the roster unchanged. Since the roster
 can change on Next Year, `l15NextYear()` calls `l15BuildShelfDom()` again
 after incrementing the year (in addition to its normal re-render) to
-rebuild the belt for the newly-revealed category.
+rebuild the belt for the newly-revealed category — `l15BuildShelfDom`
+seeds a fresh (`null`) tray-element ref for a given item key only if
+`l15ItemRefs` doesn't already have one (`!l15ItemRefs.has(item.key)`),
+rather than unconditionally overwriting it; the original unconditional
+version was fine the one time this function ran (initial page load,
+nothing placed yet) but wiping an already-placed item's ref on every
+Next Year call orphaned its real tray element (still in the DOM, no
+longer tracked) while `renderLevel1_5()` built a second, duplicate one
+for it — a real bug from play-testing, fixed the same day Next Year
+started rebuilding the shelf.
 
 **Next Year validation**: advancing requires one item placed from *every*
 currently-visible category first. `l15ValidateCategoriesBeforeNextYear()`
